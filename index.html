@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Radni Nalog</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --bg:       #F0F2F5;
+            --surface:  #FFFFFF;
+            --surface2: #F8FAFC;
+            --border:   #E2E8F0;
+            --blue:     #2563EB;
+            --blue-lt:  #EFF6FF;
+            --blue-md:  #BFDBFE;
+            --orange:   #EA580C;
+            --orange-lt:#FFF7ED;
+            --orange-md:#FED7AA;
+            --green:    #059669;
+            --green-lt: #ECFDF5;
+            --red:      #DC2626;
+            --red-lt:   #FEF2F2;
+            --red-md:   #FECACA;
+            --text:     #0F172A;
+            --text2:    #475569;
+            --text3:    #94A3B8;
+            --r-xl: 16px;  --r-lg: 12px;  --r-md: 8px;  --r-sm: 6px;
+            --sh: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+            --sh-md: 0 4px 14px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+        }
+
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        html { font-size:16px; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            padding-bottom: 80px;
+        }
+
+        /* ── APP ── */
+        .app { max-width: 600px; margin: 0 auto; }
+
+        /* ── HEADER ── */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 50;
+            height: 60px; padding: 0 18px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 1px 0 var(--border);
+        }
+        .header-brand { display: flex; align-items: center; gap: 10px; }
+        .header-icon {
+            width: 34px; height: 34px; background: var(--blue);
+            border-radius: var(--r-md);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: white; font-weight: 900;
+            letter-spacing: -1px; flex-shrink: 0;
+        }
+        .header-name { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.2; }
+        .header-sub  { font-size: 11px; color: var(--text3); font-weight: 500; }
+        .header-right { display: flex; align-items: center; gap: 8px; }
+        .pill {
+            background: var(--surface2); border: 1px solid var(--border);
+            padding: 5px 12px; border-radius: 20px;
+            font-size: 12px; font-weight: 600; color: var(--text2);
+            white-space: nowrap;
+        }
+        .emp-btn {
+            background: var(--blue-lt); border: 1px solid var(--blue-md);
+            color: var(--blue); padding: 6px 12px; border-radius: 20px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; gap: 5px;
+            font-family: inherit; transition: background .15s;
+        }
+        .emp-btn:hover { background: var(--blue-md); }
+
+        /* ── SECTIONS ── */
+        .section { padding: 18px 14px 0; }
+        .sec-label {
+            font-size: 11px; font-weight: 600; color: var(--text3);
+            letter-spacing: .6px; text-transform: uppercase;
+            margin-bottom: 8px; padding: 0 2px;
+        }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-xl);
+            padding: 20px;
+            margin-bottom: 10px;
+            box-shadow: var(--sh);
+        }
+        .card-head {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 18px;
+        }
+        .card-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+        .count {
+            font-size: 12px; font-weight: 700;
+            padding: 2px 10px; border-radius: 20px;
+            background: var(--surface2); color: var(--text3);
+            border: 1px solid var(--border);
+            transition: background .2s, color .2s;
+        }
+        .count.blue   { background: var(--blue-lt);   color: var(--blue);   border-color: var(--blue-md); }
+        .count.orange { background: var(--orange-lt); color: var(--orange); border-color: var(--orange-md); }
+
+        /* ── FORM ── */
+        .field { margin-bottom: 13px; }
+        .field:last-child { margin-bottom: 0; }
+        .field-label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+        .input {
+            width: 100%;
+            background: var(--surface2);
+            border: 1.5px solid var(--border);
+            color: var(--text);
+            padding: 11px 13px;
+            border-radius: var(--r-lg);
+            font-size: 15px; font-weight: 400; font-family: inherit;
+            outline: none; -webkit-appearance: none; appearance: none;
+            transition: border-color .15s, box-shadow .15s, background .15s;
+        }
+        .input:focus {
+            border-color: var(--blue); background: var(--surface);
+            box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+        }
+        .input.o:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(234,88,12,.1); }
+        .input::placeholder { color: var(--text3); }
+        select.input { cursor: pointer; }
+        .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .inline-row { display: flex; gap: 8px; }
+        .inline-row .input { flex: 1; }
+
+        /* ── EMPLOYEE PICKER ── */
+        .picker-label {
+            font-size: 13px; font-weight: 600; color: var(--text2);
+            margin-bottom: 8px; display: block;
+        }
+        .picker-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .emp-chip {
+            padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border);
+            background: var(--surface2); color: var(--text2);
+            font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+            transition: all .15s; user-select: none; -webkit-user-select: none;
+        }
+        .emp-chip:hover { border-color: var(--blue-md); background: var(--blue-lt); color: var(--blue); }
+        .emp-chip.on-blue   { background: var(--blue);   border-color: var(--blue);   color: white; }
+        .emp-chip.on-orange { background: var(--orange); border-color: var(--orange); color: white; }
+        .picker-empty { font-size: 13px; color: var(--text3); }
+
+        /* ── BUTTONS ── */
+        .btn {
+            width: 100%; padding: 13px 16px; border: none; border-radius: var(--r-lg);
+            font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            transition: all .15s;
+        }
+        .btn:active { transform: scale(.98); }
+        .btn-primary  { background: var(--blue);  color: white; }
+        .btn-primary:hover  { background: #1D4ED8; }
+        .btn-success  { background: var(--green); color: white; font-size: 16px; font-weight: 700; padding: 16px; }
+        .btn-success:hover  { background: #047857; }
+        .btn-danger   { background: transparent; border: 1.5px solid var(--red-md); color: var(--red); font-size: 14px; margin-top: 8px; }
+        .btn-outline  {
+            background: transparent; border: 1.5px dashed var(--border);
+            color: var(--text3); font-size: 14px;
+        }
+        .btn-outline:hover, .btn-outline:active { border-color: var(--blue); color: var(--blue); background: var(--blue-lt); }
+        .btn-outline.o:hover, .btn-outline.o:active { border-color: var(--orange); color: var(--orange); background: var(--orange-lt); }
+        .btn-sm { width: auto; padding: 0 16px; height: 44px; font-size: 14px; flex-shrink: 0; }
+
+        /* ── TASK ITEMS ── */
+        .task-list { display: flex; flex-direction: column; gap: 7px; margin-top: 13px; }
+        .task-item {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: var(--r-lg); padding: 12px 13px;
+            display: flex; gap: 10px; align-items: flex-start;
+            animation: itemIn .2s ease;
+        }
+        .task-item.urgent { border-color: var(--red-md); background: var(--red-lt); }
+        @keyframes itemIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+        .task-body { flex: 1; min-width: 0; }
+        .task-name { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+        .task-sub  { font-size: 13px; font-weight: 500; color: var(--blue); }
+        .task-sub.o { color: var(--orange); }
+        .task-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+        .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+        .tag-time   { background: var(--green-lt); color: var(--green); }
+        .tag-urgent { background: var(--red-lt); color: var(--red); border: 1px solid var(--red-md); }
+        .tag-emp    { background: var(--blue-lt); color: var(--blue); }
+        .del {
+            width: 28px; height: 28px; border-radius: var(--r-sm);
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text3); cursor: pointer; font-size: 12px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; transition: all .15s; font-family: inherit;
+        }
+        .del:hover, .del:active { background: var(--red-lt); border-color: var(--red-md); color: var(--red); }
+
+        /* ── TOAST ── */
+        .toast {
+            position: fixed; bottom: -70px; left: 50%; transform: translateX(-50%);
+            background: #1E293B; color: white;
+            padding: 11px 20px; border-radius: 30px;
+            font-size: 14px; font-weight: 600; font-family: inherit;
+            transition: bottom .3s cubic-bezier(.34,1.56,.64,1);
+            z-index: 9999; box-shadow: 0 8px 30px rgba(0,0,0,.25);
+            white-space: nowrap; pointer-events: none;
+        }
+        .toast.show { bottom: 28px; }
+        .toast.ok  { background: var(--green); }
+        .toast.err { background: var(--red); }
+
+        /* ── MODAL ── */
+        .modal-bg {
+            position: fixed; inset: 0;
+            background: rgba(15,23,42,.5);
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            z-index: 100; display: none;
+            align-items: flex-end; justify-content: center; padding: 16px;
+        }
+        .modal-bg.open { display: flex; }
+        .modal {
+            background: var(--surface); border-radius: var(--r-xl);
+            width: 100%; max-width: 520px; max-height: 82vh;
+            display: flex; flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,.2);
+            animation: slideUp .28s cubic-bezier(.34,1.56,.64,1);
+        }
+        @keyframes slideUp { from { transform:translateY(30px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+        .modal-head {
+            padding: 18px 20px 14px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .modal-title { font-size: 16px; font-weight: 700; }
+        .modal-close {
+            background: var(--surface2); border: 1px solid var(--border);
+            width: 30px; height: 30px; border-radius: 50%;
+            cursor: pointer; font-size: 14px; display: flex; align-items: center;
+            justify-content: center; color: var(--text2); font-family: inherit;
+        }
+        .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+        .modal-foot { padding: 14px 20px; border-top: 1px solid var(--border); }
+
+        .emp-row {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: var(--r-lg); padding: 12px 14px; margin-bottom: 8px;
+        }
+        .emp-row-name { font-size: 14px; font-weight: 600; }
+        .emp-row-del {
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text3); width: 28px; height: 28px;
+            border-radius: var(--r-sm); cursor: pointer; font-size: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: inherit; transition: all .15s;
+        }
+        .emp-row-del:hover { background: var(--red-lt); border-color: var(--red-md); color: var(--red); }
+        .emp-empty { font-size: 13px; color: var(--text3); padding: 8px 0 14px; text-align: center; }
+
+        /* ══════════════════════════════════════════════════════
+           DOCUMENT (white, for export)
+           ══════════════════════════════════════════════════════ */
+        .doc-shell {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--r-xl); overflow: hidden;
+            margin: 0 14px 14px; box-shadow: var(--sh-md);
+        }
+        .doc {
+            background: white; padding: 30px 26px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Doc header */
+        .dh {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            padding-bottom: 16px; margin-bottom: 16px;
+            border-bottom: 2px solid #0F172A;
+        }
+        .dh-company { font-size: 21px; font-weight: 900; color: #0F172A; letter-spacing: -.5px; }
+        .dh-sub { font-size: 11px; font-weight: 500; color: #64748B; margin-top: 2px; }
+        .dh-label { text-align: right; }
+        .dh-type { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #2563EB; }
+        .dh-num  { font-size: 11px; color: #94A3B8; font-weight: 500; margin-top: 3px; }
+
+        /* Doc meta */
+        .dm { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 18px; }
+        .dm-cell { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 12px; }
+        .dm-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #94A3B8; margin-bottom: 4px; }
+        .dm-val { font-size: 13px; font-weight: 700; color: #0F172A; }
+
+        /* Doc notice */
+        .dn { background: #FEFCE8; border-left: 4px solid #EAB308; border-radius: 6px; padding: 12px 14px; margin-bottom: 18px; display: none; }
+        .dn-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #A16207; margin-bottom: 6px; }
+        .dn ul { margin: 0; padding-left: 18px; }
+        .dn li { font-size: 13px; font-weight: 500; color: #713F12; margin-bottom: 3px; }
+
+        /* Doc section heading */
+        .ds {
+            font-size: 10px; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 1.5px; color: #334155;
+            display: flex; align-items: center; gap: 8px;
+            margin: 22px 0 10px;
+        }
+        .ds::after { content:''; flex:1; height:1px; background:#E2E8F0; }
+
+        /* Doc cards */
+        .dc-list { display: flex; flex-direction: column; gap: 10px; }
+        .dc { border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 14px 16px; }
+        .dc.radio { border-left: 4px solid #2563EB; }
+        .dc.teren { border-left: 4px solid #EA580C; }
+        .dc.urgent { border-color: #FECACA; background: #FFF5F5; }
+        .dc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
+        .dc-name { font-size: 15px; font-weight: 800; color: #0F172A; }
+        .dc-time {
+            font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+            background: #F0FDF4; color: #16A34A; border: 1px solid #BBF7D0; white-space: nowrap;
+        }
+        .dc-time.u { background: #EF4444; color: white; border-color: #EF4444; }
+        .dc-task { font-size: 13px; font-weight: 600; color: #2563EB; margin-bottom: 4px; }
+        .dc-task.o { color: #EA580C; }
+        .dc-emps { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0 2px; }
+        .dc-emp { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+        .dc-emp.o { background: #FFF7ED; color: #C2410C; border-color: #FED7AA; }
+        .dc-note { font-size: 12px; color: #64748B; background: #F8FAFC; padding: 6px 10px; border-radius: 6px; margin-top: 6px; }
+        .dc-urgent-flag { font-size: 11px; font-weight: 800; color: #DC2626; margin: 4px 0; }
+
+        /* Teren details grid */
+        .dt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; padding: 10px 12px; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 8px; }
+        .dt-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #C2410C; margin-bottom: 2px; }
+        .dt-val { font-size: 12px; font-weight: 700; color: #7C2D12; }
+
+        /* Confirm box */
+        .dc-confirm { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #E2E8F0; }
+        .dc-box { width: 18px; height: 18px; border: 2px solid #CBD5E1; border-radius: 4px; flex-shrink: 0; }
+        .dc-confirm-lbl { font-size: 11px; font-weight: 500; color: #94A3B8; }
+
+        /* Doc footer */
+        .df { margin-top: 28px; padding-top: 14px; border-top: 1px dashed #E2E8F0; display: flex; justify-content: space-between; align-items: flex-end; }
+        .df-info div { font-size: 11px; color: #94A3B8; line-height: 1.7; }
+        .df-info strong { color: #334155; font-weight: 700; }
+        .df-sig { text-align: right; }
+        .df-line { width: 120px; height: 1px; background: #CBD5E1; margin: 0 0 5px auto; }
+        .df-lbl { font-size: 10px; color: #94A3B8; font-weight: 600; }
+
+        /* Empty */
+        .doc-empty { text-align: center; padding: 28px 20px; }
+        .doc-empty-icon { font-size: 30px; margin-bottom: 8px; }
+        .doc-empty-txt { font-size: 13px; color: #94A3B8; }
+
+        #doc-sec-radio, #doc-sec-teren { display: none; }
+
+        /* Actions */
+        .actions { padding: 0 14px 14px; }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <!-- ── HEADER ── -->
+    <header class="header">
+        <div class="header-brand">
+            <div class="header-icon">P</div>
+            <div>
+                <div class="header-name">Pergole Pro</div>
+                <div class="header-sub">Radni Nalog</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="pill" id="hdr-date">--.--.----</div>
+            <button class="emp-btn" onclick="openModal()">
+                👥 <span id="hdr-emp-n">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ── META ── -->
+    <div class="section" style="margin-top:16px;">
+        <div class="sec-label">Detalji naloga</div>
+        <div class="card">
+            <div class="g2">
+                <div class="field" style="margin-bottom:0">
+                    <label class="field-label">Datum</label>
+                    <input type="date" class="input" id="inp-datum" oninput="syncHeader()">
+                </div>
+                <div class="field" style="margin-bottom:0">
+                    <label class="field-label">Smena</label>
+                    <select class="input" id="inp-smena" onchange="syncHeader()">
+                        <option>I Smena</option>
+                        <option>II Smena</option>
+                        <option>TEREN</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field" style="margin-top:12px; margin-bottom:0">
+                <label class="field-label">Nalog izdao</label>
+                <input type="text" class="input" id="inp-izdavalac" placeholder="Ime i pozicija (npr. Uprava)" oninput="syncHeader()">
+            </div>
+        </div>
+    </div>
+
+    <!-- ── OBAVEŠTENJE ── -->
+    <div class="section">
+        <div class="sec-label">Obaveštenje za sve radnike</div>
+        <div class="card">
+            <div class="field" style="margin-bottom:0">
+                <div class="inline-row">
+                    <input type="text" class="input" id="inp-opste"
+                        placeholder="Npr. Složiti alat na kraju smene"
+                        onkeydown="if(event.key==='Enter') dodajOpste()">
+                    <button class="btn btn-primary btn-sm" onclick="dodajOpste()">Dodaj</button>
+                </div>
+            </div>
+            <div id="ui-opste" class="task-list"></div>
+        </div>
+    </div>
+
+    <!-- ── RADIONICA ── -->
+    <div class="section">
+        <div class="sec-label">Radionica</div>
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title" style="color:var(--blue)">🏭 Radionica / Faze izrade</div>
+                <div class="count" id="bdg-radio">0 zadataka</div>
+            </div>
+
+            <div class="field">
+                <span class="picker-label">Dodeli radnike</span>
+                <div class="picker-chips" id="pick-radio">
+                    <span class="picker-empty">Nema zaposlenih — dodaj ih pritiskom na 👥</span>
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="field-label">Zadatak / Faza</label>
+                <input type="text" class="input" id="inp-r-faza" list="faze-dl"
+                    placeholder="Npr. Sečenje aluminijuma">
+                <datalist id="faze-dl">
+                    <option value="Sečenje aluminijuma">
+                    <option value="Šivenje platna / cerade">
+                    <option value="Pakovanje aksesoira i motora">
+                    <option value="Priprema profila">
+                    <option value="Montaža u radionici">
+                    <option value="Bojenje / lakovanje">
+                    <option value="Pakovanje za isporuku">
+                    <option value="Kontrola kvaliteta">
+                </datalist>
+            </div>
+            <div class="g2">
+                <div class="field">
+                    <label class="field-label">Rok</label>
+                    <input type="text" class="input" id="inp-r-rok" placeholder="Npr. 12:00">
+                </div>
+                <div class="field">
+                    <label class="field-label">Prioritet</label>
+                    <select class="input" id="inp-r-prior">
+                        <option value="normal">Normalno</option>
+                        <option value="hitno">🔴 HITNO</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field">
+                <label class="field-label">Projekat / Napomena</label>
+                <input type="text" class="input" id="inp-r-nota" placeholder="Npr. Pergola za kafić Baza">
+            </div>
+            <button class="btn btn-outline" onclick="dodajRadionicu()">+ Dodaj zadatak za radionicu</button>
+            <div id="ui-radio" class="task-list"></div>
+        </div>
+    </div>
+
+    <!-- ── TEREN ── -->
+    <div class="section">
+        <div class="sec-label">Teren i montaža</div>
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title" style="color:var(--orange)">🚐 Teren / Montaža</div>
+                <div class="count" id="bdg-teren">0 ekipa</div>
+            </div>
+
+            <div class="field">
+                <span class="picker-label">Ekipa — odaberi radnike</span>
+                <div class="picker-chips" id="pick-teren">
+                    <span class="picker-empty">Nema zaposlenih — dodaj ih pritiskom na 👥</span>
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="field-label">Lokacija / Posao</label>
+                <input type="text" class="input o" id="inp-t-posao"
+                    placeholder="Npr. Montaža — Restoran Jezero">
+            </div>
+            <div class="g2">
+                <div class="field">
+                    <label class="field-label">Vozilo</label>
+                    <input type="text" class="input o" id="inp-t-vozilo" placeholder="Npr. Beli Kombi">
+                </div>
+                <div class="field">
+                    <label class="field-label">Rok izlaska</label>
+                    <input type="text" class="input o" id="inp-t-rok" placeholder="u 08:00h">
+                </div>
+            </div>
+            <div class="g2">
+                <div class="field">
+                    <label class="field-label">📦 Pakuje kombi</label>
+                    <input type="text" class="input o" id="inp-t-pak" placeholder="Ko pakuje?">
+                </div>
+                <div class="field">
+                    <label class="field-label">🛠️ Glavni za montažu</label>
+                    <input type="text" class="input o" id="inp-t-mont" placeholder="Majstor">
+                </div>
+            </div>
+            <button class="btn btn-outline o" onclick="dodajTeren()">+ Dodaj ekipu za teren</button>
+            <div id="ui-teren" class="task-list"></div>
+        </div>
+    </div>
+
+    <!-- ── PREGLED ── -->
+    <div class="section">
+        <div class="sec-label">Pregled naloga</div>
+    </div>
+
+    <div class="doc-shell">
+        <div class="doc" id="export-area">
+
+            <div class="dh">
+                <div>
+                    <div class="dh-company">Pergole Pro</div>
+                    <div class="dh-sub">Proizvodnja i Montaža</div>
+                </div>
+                <div class="dh-label">
+                    <div class="dh-type">Radni Nalog</div>
+                    <div class="dh-num" id="doc-num">#---</div>
+                </div>
+            </div>
+
+            <div class="dm">
+                <div class="dm-cell"><div class="dm-lbl">Datum</div><div class="dm-val" id="doc-datum">—</div></div>
+                <div class="dm-cell"><div class="dm-lbl">Smena</div><div class="dm-val" id="doc-smena">—</div></div>
+                <div class="dm-cell"><div class="dm-lbl">Nalog izdao</div><div class="dm-val" id="doc-izdavalac">—</div></div>
+            </div>
+
+            <div class="doc-empty" id="doc-empty">
+                <div class="doc-empty-icon">📋</div>
+                <div class="doc-empty-txt">Dodaj zadatke da bi se prikazali ovde.</div>
+            </div>
+
+            <div class="dn" id="doc-notice">
+                <div class="dn-title">📢 Obavezno za sve radnike</div>
+                <ul id="doc-opste-list"></ul>
+            </div>
+
+            <div id="doc-sec-radio">
+                <div class="ds"><span style="color:#2563EB">🏭</span> Radionica</div>
+                <div class="dc-list" id="doc-radio-cards"></div>
+            </div>
+
+            <div id="doc-sec-teren">
+                <div class="ds"><span style="color:#EA580C">🚐</span> Montaža i Teren</div>
+                <div class="dc-list" id="doc-teren-cards"></div>
+            </div>
+
+            <div class="df">
+                <div class="df-info">
+                    <div><strong id="doc-foot-iz">Izdao: Uprava</strong></div>
+                    <div id="doc-foot-time"></div>
+                </div>
+                <div class="df-sig">
+                    <div class="df-line"></div>
+                    <div class="df-lbl">Potpis odgovornog lica</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── AKCIJE ── -->
+    <div class="actions">
+        <button class="btn btn-success" onclick="exportSlika()">📸 Preuzmi Nalog kao sliku</button>
+        <button class="btn btn-danger"  onclick="resetSve()">♻️ Novi nalog — obriši sve zadatke</button>
+    </div>
+</div>
+
+<!-- ── MODAL: ZAPOSLENI ── -->
+<div class="modal-bg" id="modal-bg" onclick="bgClick(event)">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="modal-title">Upravljanje zaposlenima</div>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div id="modal-emp-list"></div>
+        </div>
+        <div class="modal-foot">
+            <div class="inline-row">
+                <input type="text" class="input" id="modal-new"
+                    placeholder="Ime novog zaposlenog"
+                    onkeydown="if(event.key==='Enter') addEmp()">
+                <button class="btn btn-primary btn-sm" onclick="addEmp()">Dodaj</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const S = {
+    datum: '', smena: 'I Smena', izdavalac: '',
+    opste: [], radionica: [], teren: [],
+    employees: ['Marko', 'Jovan', 'Milan', 'Nikola', 'Stefan'],
+    uid: 0,
+    rSel: [],
+    tSel: [],
+};
+const KEY = 'nalog_v4';
+
+document.addEventListener('DOMContentLoaded', () => {
+    const now = new Date();
+    S.datum = `${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}`;
+    document.getElementById('inp-datum').value = S.datum;
+    loadStorage();
+    renderAll();
+});
+
+function p2(n) { return String(n).padStart(2,'0'); }
+function fmtDate(s) { if (!s) return '—'; const [y,m,d] = s.split('-'); return `${d}.${m}.${y}.`; }
+
+function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(_) {}
+}
+function loadStorage() {
+    try {
+        const raw = localStorage.getItem(KEY);
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        ['datum','smena','izdavalac','opste','radionica','teren','employees','uid','rSel','tSel']
+            .forEach(k => { if (d[k] !== undefined) S[k] = d[k]; });
+        if (d.datum)     document.getElementById('inp-datum').value    = d.datum;
+        if (d.smena)     document.getElementById('inp-smena').value    = d.smena;
+        if (d.izdavalac) document.getElementById('inp-izdavalac').value = d.izdavalac;
+    } catch(_) {}
+}
+
+function syncHeader() {
+    S.datum     = document.getElementById('inp-datum').value;
+    S.smena     = document.getElementById('inp-smena').value;
+    S.izdavalac = document.getElementById('inp-izdavalac').value.trim();
+    renderDocHeader();
+    save();
+}
+function renderDocHeader() {
+    setText('hdr-date',     fmtDate(S.datum));
+    setText('hdr-emp-n',    S.employees.length);
+    setText('doc-datum',    fmtDate(S.datum));
+    setText('doc-smena',    S.smena || '—');
+    setText('doc-izdavalac', S.izdavalac || 'Uprava');
+    setText('doc-foot-iz',  `Izdao: ${S.izdavalac || 'Uprava'}`);
+    setText('doc-num',      S.datum ? `#${S.datum.replace(/-/g,'')}` : '#---');
+}
+
+function renderPickers() {
+    renderPicker('pick-radio', 'rSel', 'on-blue');
+    renderPicker('pick-teren', 'tSel', 'on-orange');
+    setText('hdr-emp-n', S.employees.length);
+}
+function renderPicker(containerId, selKey, activeClass) {
+    const c = document.getElementById(containerId);
+    c.innerHTML = '';
+    if (S.employees.length === 0) {
+        const m = mkEl('span','picker-empty');
+        m.textContent = 'Nema zaposlenih — dodaj ih pritiskom na 👥';
+        c.appendChild(m); return;
+    }
+    S.employees.forEach(emp => {
+        const btn = mkEl('button', `emp-chip${S[selKey].includes(emp) ? ' '+activeClass : ''}`);
+        btn.textContent = emp;
+        btn.onclick = () => {
+            const i = S[selKey].indexOf(emp);
+            if (i > -1) S[selKey].splice(i, 1); else S[selKey].push(emp);
+            renderPicker(containerId, selKey, activeClass);
+        };
+        c.appendChild(btn);
+    });
+}
+
+function openModal()  {
+    renderModalList();
+    document.getElementById('modal-bg').classList.add('open');
+    setTimeout(() => document.getElementById('modal-new').focus(), 300);
+}
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
+function bgClick(e)   { if (e.target === e.currentTarget) closeModal(); }
+
+function renderModalList() {
+    const list = document.getElementById('modal-emp-list');
+    list.innerHTML = '';
+    if (S.employees.length === 0) {
+        const e = mkEl('div','emp-empty'); e.textContent = 'Još uvek nema zaposlenih.';
+        list.appendChild(e); return;
+    }
+    S.employees.forEach((emp, i) => {
+        const row = mkEl('div','emp-row');
+        const n   = mkEl('div','emp-row-name'); n.textContent = emp;
+        const del = mkEl('button','emp-row-del'); del.textContent = '✕';
+        del.title = `Obriši ${emp}`;
+        del.onclick = () => removeEmp(i);
+        row.appendChild(n); row.appendChild(del);
+        list.appendChild(row);
+    });
+}
+function addEmp() {
+    const inp  = document.getElementById('modal-new');
+    const name = inp.value.trim();
+    if (!name) return;
+    if (S.employees.includes(name)) { toast(`"${name}" već postoji`,'err'); return; }
+    S.employees.push(name);
+    inp.value = '';
+    save(); renderModalList(); renderPickers(); renderDocHeader();
+    toast(`${name} dodan`,'ok');
+}
+function removeEmp(i) {
+    const name = S.employees[i];
+    S.employees.splice(i, 1);
+    S.rSel = S.rSel.filter(e => e !== name);
+    S.tSel = S.tSel.filter(e => e !== name);
+    save(); renderModalList(); renderPickers(); renderDocHeader();
+}
+
+function dodajOpste() {
+    const inp = document.getElementById('inp-opste');
+    const txt = inp.value.trim();
+    if (!txt) return;
+    S.opste.push(txt); inp.value = '';
+    renderOpste(); save(); toast('Poruka dodana','ok');
+}
+function deleteOpste(i) { S.opste.splice(i,1); renderOpste(); save(); }
+function renderOpste() {
+    const ul = document.getElementById('ui-opste');
+    ul.innerHTML = '';
+    S.opste.forEach((txt, i) => ul.appendChild(buildTaskItem(txt, '', [], null, () => deleteOpste(i))));
+    const notice = document.getElementById('doc-notice');
+    const dlist  = document.getElementById('doc-opste-list');
+    dlist.innerHTML = '';
+    if (S.opste.length > 0) {
+        notice.style.display = 'block';
+        S.opste.forEach(txt => { const li = document.createElement('li'); li.textContent = txt; dlist.appendChild(li); });
+    } else notice.style.display = 'none';
+    checkEmpty();
+}
+
+function dodajRadionicu() {
+    const faza = document.getElementById('inp-r-faza').value.trim();
+    if (!faza)            { toast('Zadatak je obavezan','err'); return; }
+    if (!S.rSel.length)   { toast('Odaberi bar jednog radnika','err'); return; }
+    S.uid++;
+    S.radionica.push({
+        id:  S.uid,
+        emps: [...S.rSel],
+        faza,
+        rok:  document.getElementById('inp-r-rok').value.trim(),
+        prior: document.getElementById('inp-r-prior').value,
+        nota: document.getElementById('inp-r-nota').value.trim(),
+    });
+    clearInputs(['inp-r-faza','inp-r-rok','inp-r-nota']);
+    document.getElementById('inp-r-prior').value = 'normal';
+    S.rSel = []; renderPickers();
+    renderRadionica(); save(); toast('Zadatak dodan','ok');
+}
+function deleteRadionica(id) { S.radionica = S.radionica.filter(t => t.id !== id); renderRadionica(); save(); }
+function renderRadionica() {
+    const ul = document.getElementById('ui-radio');
+    ul.innerHTML = '';
+    S.radionica.forEach(t => ul.appendChild(
+        buildTaskItem(t.emps.join(', '), t.faza, t.emps, t.rok, () => deleteRadionica(t.id), t.prior)
+    ));
+    updateCount('bdg-radio', S.radionica.length, 'zadatak', 'blue');
+    const sec   = document.getElementById('doc-sec-radio');
+    const cards = document.getElementById('doc-radio-cards');
+    cards.innerHTML = '';
+    if (S.radionica.length > 0) { sec.style.display='block'; S.radionica.forEach(t => cards.appendChild(buildDocCard(t))); }
+    else sec.style.display = 'none';
+    checkEmpty();
+}
+
+function dodajTeren() {
+    const posao = document.getElementById('inp-t-posao').value.trim();
+    if (!posao)           { toast('Lokacija je obavezna','err'); return; }
+    if (!S.tSel.length)   { toast('Odaberi bar jednog radnika','err'); return; }
+    S.uid++;
+    S.teren.push({
+        id:   S.uid,
+        emps: [...S.tSel],
+        posao,
+        vozilo: document.getElementById('inp-t-vozilo').value.trim() || '—',
+        rok:    document.getElementById('inp-t-rok').value.trim(),
+        pak:    document.getElementById('inp-t-pak').value.trim() || '—',
+        mont:   document.getElementById('inp-t-mont').value.trim() || '—',
+    });
+    clearInputs(['inp-t-posao','inp-t-vozilo','inp-t-rok','inp-t-pak','inp-t-mont']);
+    S.tSel = []; renderPickers();
+    renderTeren(); save(); toast('Ekipa dodana','ok');
+}
+function deleteTeren(id) { S.teren = S.teren.filter(t => t.id !== id); renderTeren(); save(); }
+function renderTeren() {
+    const ul = document.getElementById('ui-teren');
+    ul.innerHTML = '';
+    S.teren.forEach(t => ul.appendChild(buildTerenItem(t)));
+    updateCount('bdg-teren', S.teren.length, 'ekipa', 'orange');
+    const sec   = document.getElementById('doc-sec-teren');
+    const cards = document.getElementById('doc-teren-cards');
+    cards.innerHTML = '';
+    if (S.teren.length > 0) { sec.style.display='block'; S.teren.forEach(t => cards.appendChild(buildDocTerenCard(t))); }
+    else sec.style.display = 'none';
+    checkEmpty();
+}
+
+function buildTaskItem(name, sub, emps, rok, onDel, prior) {
+    const item = mkEl('div', `task-item${prior==='hitno'?' urgent':''}`);
+    const body = mkEl('div','task-body');
+    const n = mkEl('div','task-name'); n.textContent = name; body.appendChild(n);
+    if (sub) { const s = mkEl('div','task-sub'); s.textContent = sub; body.appendChild(s); }
+    const tags = mkEl('div','task-tags');
+    if (rok)            { const t=mkEl('span','tag tag-time');   t.textContent=`⏰ ${rok}`;   tags.appendChild(t); }
+    if (prior==='hitno'){ const t=mkEl('span','tag tag-urgent'); t.textContent='HITNO';        tags.appendChild(t); }
+    if (tags.children.length) body.appendChild(tags);
+    const d = mkEl('button','del'); d.textContent='✕'; d.onclick = onDel;
+    item.appendChild(body); item.appendChild(d);
+    return item;
+}
+function buildTerenItem(t) {
+    const item = mkEl('div','task-item');
+    const body = mkEl('div','task-body');
+    const n = mkEl('div','task-name'); n.textContent = t.emps.join(', '); body.appendChild(n);
+    const s = mkEl('div','task-sub o'); s.textContent = t.posao; body.appendChild(s);
+    const tags = mkEl('div','task-tags');
+    if (t.rok) { const tg=mkEl('span','tag tag-time'); tg.textContent=`⏰ ${t.rok}`; tags.appendChild(tg); }
+    const vt = mkEl('span','tag'); vt.style.cssText='background:#F1F5F9;color:#475569;'; vt.textContent=`🚐 ${t.vozilo}`; tags.appendChild(vt);
+    body.appendChild(tags);
+    const d = mkEl('button','del'); d.textContent='✕'; d.onclick=()=>deleteTeren(t.id);
+    item.appendChild(body); item.appendChild(d);
+    return item;
+}
+
+function buildDocCard(t) {
+    const card = mkEl('div',`dc radio${t.prior==='hitno'?' urgent':''}`);
+    const top = mkEl('div','dc-top');
+    const n   = mkEl('div','dc-name'); n.textContent=`👤 ${t.emps.join(', ')}`; top.appendChild(n);
+    if (t.rok) { const tm=mkEl('div',`dc-time${t.prior==='hitno'?' u':''}`); tm.textContent=`⏰ ${t.rok}`; top.appendChild(tm); }
+    card.appendChild(top);
+    const task = mkEl('div','dc-task'); task.textContent=`✂️ ${t.faza}`; card.appendChild(task);
+    if (t.prior==='hitno') { const f=mkEl('div','dc-urgent-flag'); f.textContent='🔴 HITNO — Prioritetan zadatak!'; card.appendChild(f); }
+    if (t.nota) { const note=mkEl('div','dc-note'); note.textContent=`📝 ${t.nota}`; card.appendChild(note); }
+    card.appendChild(buildConfirm('Potvrđeno / Završeno'));
+    return card;
+}
+function buildDocTerenCard(t) {
+    const card = mkEl('div','dc teren');
+    const top  = mkEl('div','dc-top');
+    const n    = mkEl('div','dc-name'); n.textContent=`👥 ${t.emps.join(', ')}`; top.appendChild(n);
+    if (t.rok) { const tm=mkEl('div','dc-time'); tm.textContent=`⏰ ${t.rok}`; top.appendChild(tm); }
+    card.appendChild(top);
+    const p = mkEl('div','dc-task o'); p.textContent=`📍 ${t.posao}`; card.appendChild(p);
+    const grid = mkEl('div','dt-grid');
+    [{lbl:'Vozilo',val:t.vozilo},{lbl:'Rok izlaska',val:t.rok||'—'},{lbl:'Pakuje kombi',val:t.pak},{lbl:'Glavni montaža',val:t.mont}]
+        .forEach(item => {
+            const cell = mkEl('div');
+            const l=mkEl('div','dt-lbl'); l.textContent=item.lbl;
+            const v=mkEl('div','dt-val'); v.textContent=item.val;
+            cell.appendChild(l); cell.appendChild(v); grid.appendChild(cell);
+        });
+    card.appendChild(grid);
+    card.appendChild(buildConfirm('Ekipa potvrdila — može na teren'));
+    return card;
+}
+function buildConfirm(label) {
+    const row = mkEl('div','dc-confirm');
+    const box = mkEl('div','dc-box');
+    const lbl = mkEl('div','dc-confirm-lbl'); lbl.textContent = label;
+    row.appendChild(box); row.appendChild(lbl);
+    return row;
+}
+
+function mkEl(tag, cls) { const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+function setText(id, txt) { const e=document.getElementById(id); if(e) e.textContent=txt; }
+function clearInputs(ids) { ids.forEach(id => { const e=document.getElementById(id); if(e) e.value=''; }); }
+
+function updateCount(id, n, unit, color) {
+    const b = document.getElementById(id);
+    const plural = n===1 ? '' : (unit==='ekipa' ? '' : 'a');
+    b.textContent = `${n} ${unit}${plural}`;
+    b.className = `count${n>0 ? ' '+color : ''}`;
+}
+function checkEmpty() {
+    const has = S.opste.length || S.radionica.length || S.teren.length;
+    document.getElementById('doc-empty').style.display = has ? 'none' : 'block';
+}
+function toast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = `toast ${type||''} show`;
+    clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function renderAll() {
+    renderDocHeader(); renderPickers();
+    renderOpste(); renderRadionica(); renderTeren();
+}
+
+function resetSve() {
+    if (!confirm('Obrisati sve zadatke za novi nalog?\n(Zaposleni ostaju sačuvani)')) return;
+    S.opste=[]; S.radionica=[]; S.teren=[]; S.uid=0; S.rSel=[]; S.tSel=[];
+    const now=new Date(); S.datum=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}`;
+    document.getElementById('inp-datum').value = S.datum;
+    save(); renderAll(); toast('Novi nalog spreman','ok');
+}
+
+function exportSlika() {
+    const has = S.opste.length || S.radionica.length || S.teren.length;
+    if (!has) { toast('Dodaj bar jedan zadatak','err'); return; }
+    const now  = new Date();
+    const time = now.toLocaleTimeString('sr-RS',{hour:'2-digit',minute:'2-digit'});
+    setText('doc-foot-time', `Kreirano: ${fmtDate(S.datum)} u ${time}`);
+    setText('doc-foot-iz',   `Izdao: ${S.izdavalac || 'Uprava'}`);
+    const area = document.getElementById('export-area');
+    window.scrollTo(0,0);
+    html2canvas(area, {scale:2.5, backgroundColor:'#ffffff', useCORS:true, logging:false})
+        .then(canvas => {
+            const a = document.createElement('a');
+            a.download = `Nalog_${(S.datum||'').replace(/-/g,'')}_${S.smena.replace(/ /g,'')}.png`;
+            a.href = canvas.toDataURL('image/png');
+            a.click();
+            toast('Nalog preuzet','ok');
+        })
+        .catch(() => toast('Greška pri izvozu','err'));
+}
+</script>
+</body>
+</html>
