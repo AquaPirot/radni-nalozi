@@ -2,7 +2,7 @@
   "name": "Pergole Pro — Radni Nalog",
   "short_name": "Radni Nalog",
   "description": "Kreiranje i deljenje radnih naloga za Pergole Pro",
-  "start_url": "/",
+  "start_url": "/radni-nalozi/",
   "display": "standalone",
   "background_color": "#F0F2F5",
   "theme_color": "#2563EB",
