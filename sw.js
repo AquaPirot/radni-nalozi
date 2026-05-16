@@ -1,5 +1,5 @@
 const CACHE = 'nalog-v1';
-const LOCAL_ASSETS = ['/', '/index.html', '/manifest.json', '/icon.svg'];
+const LOCAL_ASSETS = ['/', '/index.html', '/manifest.json', '/icon.png'];
 
 self.addEventListener('install', e => {
     e.waitUntil(caches.open(CACHE).then(c => c.addAll(LOCAL_ASSETS)));
