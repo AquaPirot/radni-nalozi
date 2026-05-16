@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563EB">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Radni Nalog">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.svg">
     <title>Radni Nalog</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -23,6 +29,9 @@
             --red:      #DC2626;
             --red-lt:   #FEF2F2;
             --red-md:   #FECACA;
+            --purple:   #7C3AED;
+            --purple-lt:#F5F3FF;
+            --purple-md:#DDD6FE;
             --text:     #0F172A;
             --text2:    #475569;
             --text3:    #94A3B8;
@@ -167,6 +176,8 @@
         .btn-primary:hover  { background: #1D4ED8; }
         .btn-success  { background: var(--green); color: white; font-size: 16px; font-weight: 700; padding: 16px; }
         .btn-success:hover  { background: #047857; }
+        .btn-whatsapp { background: #25D366; color: white; font-size: 15px; font-weight: 700; padding: 14px; }
+        .btn-whatsapp:hover { background: #1aad54; }
         .btn-danger   { background: transparent; border: 1.5px solid var(--red-md); color: var(--red); font-size: 14px; margin-top: 8px; }
         .btn-outline  {
             background: transparent; border: 1.5px dashed var(--border);
@@ -185,16 +196,28 @@
             animation: itemIn .2s ease;
         }
         .task-item.urgent { border-color: var(--red-md); background: var(--red-lt); }
+        .task-item.st-zavrseno { opacity: .7; }
         @keyframes itemIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
         .task-body { flex: 1; min-width: 0; }
         .task-name { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
         .task-sub  { font-size: 13px; font-weight: 500; color: var(--blue); }
         .task-sub.o { color: var(--orange); }
-        .task-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+        .task-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; align-items: center; }
         .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
         .tag-time   { background: var(--green-lt); color: var(--green); }
         .tag-urgent { background: var(--red-lt); color: var(--red); border: 1px solid var(--red-md); }
-        .tag-emp    { background: var(--blue-lt); color: var(--blue); }
+        .tag-client { background: var(--purple-lt); color: var(--purple); border: 1px solid var(--purple-md); }
+
+        /* ── STATUS CHIP ── */
+        .status-btn {
+            font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 20px;
+            cursor: pointer; font-family: inherit; transition: all .15s;
+            user-select: none; -webkit-user-select: none;
+        }
+        .st-ceka     { background: #F1F5F9; color: #64748B; border: 1.5px solid #CBD5E1; }
+        .st-u-toku   { background: #EFF6FF; color: #2563EB; border: 1.5px solid #93C5FD; }
+        .st-zavrseno { background: #ECFDF5; color: #059669; border: 1.5px solid #6EE7B7; }
+
         .del {
             width: 28px; height: 28px; border-radius: var(--r-sm);
             background: transparent; border: 1px solid var(--border);
@@ -318,6 +341,7 @@
         .dc.radio { border-left: 4px solid #2563EB; }
         .dc.teren { border-left: 4px solid #EA580C; }
         .dc.urgent { border-color: #FECACA; background: #FFF5F5; }
+        .dc.st-done { opacity: .75; }
         .dc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
         .dc-name { font-size: 15px; font-weight: 800; color: #0F172A; }
         .dc-time {
@@ -327,6 +351,11 @@
         .dc-time.u { background: #EF4444; color: white; border-color: #EF4444; }
         .dc-task { font-size: 13px; font-weight: 600; color: #2563EB; margin-bottom: 4px; }
         .dc-task.o { color: #EA580C; }
+        .dc-client {
+            font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 20px;
+            background: #F5F3FF; color: #7C3AED; border: 1px solid #DDD6FE;
+            display: inline-block; margin-bottom: 5px;
+        }
         .dc-emps { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0 2px; }
         .dc-emp { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
         .dc-emp.o { background: #FFF7ED; color: #C2410C; border-color: #FED7AA; }
@@ -340,8 +369,15 @@
 
         /* Confirm box */
         .dc-confirm { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #E2E8F0; }
-        .dc-box { width: 18px; height: 18px; border: 2px solid #CBD5E1; border-radius: 4px; flex-shrink: 0; }
+        .dc-box {
+            width: 18px; height: 18px; border: 2px solid #CBD5E1; border-radius: 4px;
+            flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+        }
+        .dc-box.half    { background: #BFDBFE; border-color: #2563EB; }
+        .dc-box.checked { background: #059669; border-color: #059669; }
+        .dc-box.checked::after { content: '✓'; color: white; font-size: 11px; font-weight: 900; }
         .dc-confirm-lbl { font-size: 11px; font-weight: 500; color: #94A3B8; }
+        .dc-confirm-lbl.done { color: #059669; font-weight: 700; }
 
         /* Doc footer */
         .df { margin-top: 28px; padding-top: 14px; border-top: 1px dashed #E2E8F0; display: flex; justify-content: space-between; align-items: flex-end; }
@@ -454,6 +490,10 @@
                     <option value="Kontrola kvaliteta">
                 </datalist>
             </div>
+            <div class="field">
+                <label class="field-label">🏢 Klijent / Objekat</label>
+                <input type="text" class="input" id="inp-r-klijent" placeholder="Npr. Kafić Baza, Vila Petrović...">
+            </div>
             <div class="g2">
                 <div class="field">
                     <label class="field-label">Rok</label>
@@ -496,6 +536,10 @@
                 <label class="field-label">Lokacija / Posao</label>
                 <input type="text" class="input o" id="inp-t-posao"
                     placeholder="Npr. Montaža — Restoran Jezero">
+            </div>
+            <div class="field">
+                <label class="field-label">🏢 Klijent / Objekat</label>
+                <input type="text" class="input o" id="inp-t-klijent" placeholder="Npr. Restoran Jezero, g-din Marković...">
             </div>
             <div class="g2">
                 <div class="field">
@@ -582,8 +626,9 @@
 
     <!-- ── AKCIJE ── -->
     <div class="actions">
-        <button class="btn btn-success" onclick="exportSlika()">📸 Preuzmi Nalog kao sliku</button>
-        <button class="btn btn-danger"  onclick="resetSve()">♻️ Novi nalog — obriši sve zadatke</button>
+        <button class="btn btn-success"   onclick="exportSlika()">📸 Preuzmi Nalog kao sliku</button>
+        <button class="btn btn-whatsapp"  onclick="shareWhatsApp()" style="margin-top:8px">💬 Podeli na WhatsApp</button>
+        <button class="btn btn-danger"    onclick="resetSve()">♻️ Novi nalog — obriši sve zadatke</button>
     </div>
 </div>
 
@@ -621,6 +666,14 @@ const S = {
 };
 const KEY = 'nalog_v4';
 
+const STATUS_LABELS = { ceka: '⏸ Čeka', 'u-toku': '▶ U toku', zavrseno: '✓ Završeno' };
+const STATUS_CYCLE  = { ceka: 'u-toku', 'u-toku': 'zavrseno', zavrseno: 'ceka' };
+const STATUS_CONF   = {
+    ceka:     { boxCls: '',        lblCls: '',     lbl: 'Potvrđeno / Završeno' },
+    'u-toku': { boxCls: 'half',    lblCls: '',     lbl: '▶ U toku...' },
+    zavrseno: { boxCls: 'checked', lblCls: 'done', lbl: '✓ Završeno' },
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
     S.datum = `${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}`;
@@ -642,8 +695,8 @@ function loadStorage() {
         const d = JSON.parse(raw);
         ['datum','smena','izdavalac','opste','radionica','teren','employees','uid','rSel','tSel']
             .forEach(k => { if (d[k] !== undefined) S[k] = d[k]; });
-        if (d.datum)     document.getElementById('inp-datum').value    = d.datum;
-        if (d.smena)     document.getElementById('inp-smena').value    = d.smena;
+        if (d.datum)     document.getElementById('inp-datum').value     = d.datum;
+        if (d.smena)     document.getElementById('inp-smena').value     = d.smena;
         if (d.izdavalac) document.getElementById('inp-izdavalac').value = d.izdavalac;
     } catch(_) {}
 }
@@ -656,13 +709,13 @@ function syncHeader() {
     save();
 }
 function renderDocHeader() {
-    setText('hdr-date',     fmtDate(S.datum));
-    setText('hdr-emp-n',    S.employees.length);
-    setText('doc-datum',    fmtDate(S.datum));
-    setText('doc-smena',    S.smena || '—');
+    setText('hdr-date',      fmtDate(S.datum));
+    setText('hdr-emp-n',     S.employees.length);
+    setText('doc-datum',     fmtDate(S.datum));
+    setText('doc-smena',     S.smena || '—');
     setText('doc-izdavalac', S.izdavalac || 'Uprava');
-    setText('doc-foot-iz',  `Izdao: ${S.izdavalac || 'Uprava'}`);
-    setText('doc-num',      S.datum ? `#${S.datum.replace(/-/g,'')}` : '#---');
+    setText('doc-foot-iz',   `Izdao: ${S.izdavalac || 'Uprava'}`);
+    setText('doc-num',       S.datum ? `#${S.datum.replace(/-/g,'')}` : '#---');
 }
 
 function renderPickers() {
@@ -733,6 +786,7 @@ function removeEmp(i) {
     save(); renderModalList(); renderPickers(); renderDocHeader();
 }
 
+/* ── OBAVEŠTENJA ── */
 function dodajOpste() {
     const inp = document.getElementById('inp-opste');
     const txt = inp.value.trim();
@@ -744,7 +798,7 @@ function deleteOpste(i) { S.opste.splice(i,1); renderOpste(); save(); }
 function renderOpste() {
     const ul = document.getElementById('ui-opste');
     ul.innerHTML = '';
-    S.opste.forEach((txt, i) => ul.appendChild(buildTaskItem(txt, '', [], null, () => deleteOpste(i))));
+    S.opste.forEach((txt, i) => ul.appendChild(buildTaskItem(txt, '', null, () => deleteOpste(i))));
     const notice = document.getElementById('doc-notice');
     const dlist  = document.getElementById('doc-opste-list');
     dlist.innerHTML = '';
@@ -755,20 +809,33 @@ function renderOpste() {
     checkEmpty();
 }
 
+/* ── STATUS ── */
+function cycleStatus(type, id) {
+    const arr = type === 'radionica' ? S.radionica : S.teren;
+    const task = arr.find(t => t.id === id);
+    if (!task) return;
+    task.status = STATUS_CYCLE[task.status || 'ceka'];
+    save();
+    if (type === 'radionica') renderRadionica(); else renderTeren();
+}
+
+/* ── RADIONICA ── */
 function dodajRadionicu() {
     const faza = document.getElementById('inp-r-faza').value.trim();
-    if (!faza)            { toast('Zadatak je obavezan','err'); return; }
-    if (!S.rSel.length)   { toast('Odaberi bar jednog radnika','err'); return; }
+    if (!faza)          { toast('Zadatak je obavezan','err'); return; }
+    if (!S.rSel.length) { toast('Odaberi bar jednog radnika','err'); return; }
     S.uid++;
     S.radionica.push({
-        id:  S.uid,
-        emps: [...S.rSel],
+        id:      S.uid,
+        emps:    [...S.rSel],
         faza,
-        rok:  document.getElementById('inp-r-rok').value.trim(),
-        prior: document.getElementById('inp-r-prior').value,
-        nota: document.getElementById('inp-r-nota').value.trim(),
+        klijent: document.getElementById('inp-r-klijent').value.trim(),
+        rok:     document.getElementById('inp-r-rok').value.trim(),
+        prior:   document.getElementById('inp-r-prior').value,
+        nota:    document.getElementById('inp-r-nota').value.trim(),
+        status:  'ceka',
     });
-    clearInputs(['inp-r-faza','inp-r-rok','inp-r-nota']);
+    clearInputs(['inp-r-faza','inp-r-klijent','inp-r-rok','inp-r-nota']);
     document.getElementById('inp-r-prior').value = 'normal';
     S.rSel = []; renderPickers();
     renderRadionica(); save(); toast('Zadatak dodan','ok');
@@ -778,32 +845,37 @@ function renderRadionica() {
     const ul = document.getElementById('ui-radio');
     ul.innerHTML = '';
     S.radionica.forEach(t => ul.appendChild(
-        buildTaskItem(t.emps.join(', '), t.faza, t.emps, t.rok, () => deleteRadionica(t.id), t.prior)
+        buildRadionicaItem(t)
     ));
     updateCount('bdg-radio', S.radionica.length, 'zadatak', 'blue');
     const sec   = document.getElementById('doc-sec-radio');
     const cards = document.getElementById('doc-radio-cards');
     cards.innerHTML = '';
-    if (S.radionica.length > 0) { sec.style.display='block'; S.radionica.forEach(t => cards.appendChild(buildDocCard(t))); }
-    else sec.style.display = 'none';
+    if (S.radionica.length > 0) {
+        sec.style.display = 'block';
+        S.radionica.forEach(t => cards.appendChild(buildDocCard(t)));
+    } else sec.style.display = 'none';
     checkEmpty();
 }
 
+/* ── TEREN ── */
 function dodajTeren() {
     const posao = document.getElementById('inp-t-posao').value.trim();
     if (!posao)           { toast('Lokacija je obavezna','err'); return; }
     if (!S.tSel.length)   { toast('Odaberi bar jednog radnika','err'); return; }
     S.uid++;
     S.teren.push({
-        id:   S.uid,
-        emps: [...S.tSel],
+        id:      S.uid,
+        emps:    [...S.tSel],
         posao,
-        vozilo: document.getElementById('inp-t-vozilo').value.trim() || '—',
-        rok:    document.getElementById('inp-t-rok').value.trim(),
-        pak:    document.getElementById('inp-t-pak').value.trim() || '—',
-        mont:   document.getElementById('inp-t-mont').value.trim() || '—',
+        klijent: document.getElementById('inp-t-klijent').value.trim(),
+        vozilo:  document.getElementById('inp-t-vozilo').value.trim() || '—',
+        rok:     document.getElementById('inp-t-rok').value.trim(),
+        pak:     document.getElementById('inp-t-pak').value.trim() || '—',
+        mont:    document.getElementById('inp-t-mont').value.trim() || '—',
+        status:  'ceka',
     });
-    clearInputs(['inp-t-posao','inp-t-vozilo','inp-t-rok','inp-t-pak','inp-t-mont']);
+    clearInputs(['inp-t-posao','inp-t-klijent','inp-t-vozilo','inp-t-rok','inp-t-pak','inp-t-mont']);
     S.tSel = []; renderPickers();
     renderTeren(); save(); toast('Ekipa dodana','ok');
 }
@@ -816,78 +888,205 @@ function renderTeren() {
     const sec   = document.getElementById('doc-sec-teren');
     const cards = document.getElementById('doc-teren-cards');
     cards.innerHTML = '';
-    if (S.teren.length > 0) { sec.style.display='block'; S.teren.forEach(t => cards.appendChild(buildDocTerenCard(t))); }
-    else sec.style.display = 'none';
+    if (S.teren.length > 0) {
+        sec.style.display = 'block';
+        S.teren.forEach(t => cards.appendChild(buildDocTerenCard(t)));
+    } else sec.style.display = 'none';
     checkEmpty();
 }
 
-function buildTaskItem(name, sub, emps, rok, onDel, prior) {
-    const item = mkEl('div', `task-item${prior==='hitno'?' urgent':''}`);
+/* ── BUILDERS: UI ITEMS ── */
+
+// Generic task item (used for opste obaveštenja)
+function buildTaskItem(name, sub, rok, onDel) {
+    const item = mkEl('div', 'task-item');
     const body = mkEl('div','task-body');
     const n = mkEl('div','task-name'); n.textContent = name; body.appendChild(n);
     if (sub) { const s = mkEl('div','task-sub'); s.textContent = sub; body.appendChild(s); }
-    const tags = mkEl('div','task-tags');
-    if (rok)            { const t=mkEl('span','tag tag-time');   t.textContent=`⏰ ${rok}`;   tags.appendChild(t); }
-    if (prior==='hitno'){ const t=mkEl('span','tag tag-urgent'); t.textContent='HITNO';        tags.appendChild(t); }
-    if (tags.children.length) body.appendChild(tags);
-    const d = mkEl('button','del'); d.textContent='✕'; d.onclick = onDel;
+    if (rok) {
+        const tags = mkEl('div','task-tags');
+        const t = mkEl('span','tag tag-time'); t.textContent = `⏰ ${rok}`; tags.appendChild(t);
+        body.appendChild(tags);
+    }
+    const d = mkEl('button','del'); d.textContent = '✕'; d.onclick = onDel;
     item.appendChild(body); item.appendChild(d);
     return item;
 }
+
+function buildRadionicaItem(t) {
+    const st = t.status || 'ceka';
+    const item = mkEl('div', `task-item${t.prior==='hitno'?' urgent':''}${st==='zavrseno'?' st-zavrseno':''}`);
+    const body = mkEl('div','task-body');
+    const n = mkEl('div','task-name'); n.textContent = t.emps.join(', '); body.appendChild(n);
+    const s = mkEl('div','task-sub'); s.textContent = t.faza; body.appendChild(s);
+    const tags = mkEl('div','task-tags');
+    if (t.klijent) { const tg=mkEl('span','tag tag-client'); tg.textContent=`🏢 ${t.klijent}`; tags.appendChild(tg); }
+    if (t.rok)     { const tg=mkEl('span','tag tag-time');   tg.textContent=`⏰ ${t.rok}`;      tags.appendChild(tg); }
+    if (t.prior==='hitno') { const tg=mkEl('span','tag'); tg.style.cssText='background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;'; tg.textContent='HITNO'; tags.appendChild(tg); }
+    // status chip
+    const stBtn = mkEl('button', `status-btn st-${st}`);
+    stBtn.textContent = STATUS_LABELS[st];
+    stBtn.onclick = (e) => { e.stopPropagation(); cycleStatus('radionica', t.id); };
+    tags.appendChild(stBtn);
+    body.appendChild(tags);
+    const d = mkEl('button','del'); d.textContent = '✕'; d.onclick = () => deleteRadionica(t.id);
+    item.appendChild(body); item.appendChild(d);
+    return item;
+}
+
 function buildTerenItem(t) {
-    const item = mkEl('div','task-item');
+    const st = t.status || 'ceka';
+    const item = mkEl('div', `task-item${st==='zavrseno'?' st-zavrseno':''}`);
     const body = mkEl('div','task-body');
     const n = mkEl('div','task-name'); n.textContent = t.emps.join(', '); body.appendChild(n);
     const s = mkEl('div','task-sub o'); s.textContent = t.posao; body.appendChild(s);
     const tags = mkEl('div','task-tags');
-    if (t.rok) { const tg=mkEl('span','tag tag-time'); tg.textContent=`⏰ ${t.rok}`; tags.appendChild(tg); }
+    if (t.klijent) { const tg=mkEl('span','tag tag-client'); tg.textContent=`🏢 ${t.klijent}`; tags.appendChild(tg); }
+    if (t.rok)     { const tg=mkEl('span','tag tag-time');   tg.textContent=`⏰ ${t.rok}`;      tags.appendChild(tg); }
     const vt = mkEl('span','tag'); vt.style.cssText='background:#F1F5F9;color:#475569;'; vt.textContent=`🚐 ${t.vozilo}`; tags.appendChild(vt);
+    const stBtn = mkEl('button', `status-btn st-${st}`);
+    stBtn.textContent = STATUS_LABELS[st];
+    stBtn.onclick = (e) => { e.stopPropagation(); cycleStatus('teren', t.id); };
+    tags.appendChild(stBtn);
     body.appendChild(tags);
-    const d = mkEl('button','del'); d.textContent='✕'; d.onclick=()=>deleteTeren(t.id);
+    const d = mkEl('button','del'); d.textContent = '✕'; d.onclick = () => deleteTeren(t.id);
     item.appendChild(body); item.appendChild(d);
     return item;
 }
 
+/* ── BUILDERS: DOC CARDS ── */
+
 function buildDocCard(t) {
-    const card = mkEl('div',`dc radio${t.prior==='hitno'?' urgent':''}`);
+    const st = t.status || 'ceka';
+    const card = mkEl('div', `dc radio${t.prior==='hitno'?' urgent':''}${st==='zavrseno'?' st-done':''}`);
     const top = mkEl('div','dc-top');
-    const n   = mkEl('div','dc-name'); n.textContent=`👤 ${t.emps.join(', ')}`; top.appendChild(n);
-    if (t.rok) { const tm=mkEl('div',`dc-time${t.prior==='hitno'?' u':''}`); tm.textContent=`⏰ ${t.rok}`; top.appendChild(tm); }
+    const nm  = mkEl('div','dc-name'); nm.textContent = `👤 ${t.emps.join(', ')}`; top.appendChild(nm);
+    if (t.rok) {
+        const tm = mkEl('div', `dc-time${t.prior==='hitno'?' u':''}`);
+        tm.textContent = `⏰ ${t.rok}`; top.appendChild(tm);
+    }
     card.appendChild(top);
-    const task = mkEl('div','dc-task'); task.textContent=`✂️ ${t.faza}`; card.appendChild(task);
-    if (t.prior==='hitno') { const f=mkEl('div','dc-urgent-flag'); f.textContent='🔴 HITNO — Prioritetan zadatak!'; card.appendChild(f); }
-    if (t.nota) { const note=mkEl('div','dc-note'); note.textContent=`📝 ${t.nota}`; card.appendChild(note); }
-    card.appendChild(buildConfirm('Potvrđeno / Završeno'));
+    const task = mkEl('div','dc-task'); task.textContent = `✂️ ${t.faza}`; card.appendChild(task);
+    if (t.klijent) {
+        const kl = mkEl('span','dc-client'); kl.textContent = `🏢 ${t.klijent}`; card.appendChild(kl);
+    }
+    if (t.prior === 'hitno') {
+        const f = mkEl('div','dc-urgent-flag'); f.textContent = '🔴 HITNO — Prioritetan zadatak!'; card.appendChild(f);
+    }
+    if (t.nota) {
+        const note = mkEl('div','dc-note'); note.textContent = `📝 ${t.nota}`; card.appendChild(note);
+    }
+    card.appendChild(buildConfirm('Potvrđeno / Završeno', st));
     return card;
 }
+
 function buildDocTerenCard(t) {
-    const card = mkEl('div','dc teren');
+    const st = t.status || 'ceka';
+    const card = mkEl('div', `dc teren${st==='zavrseno'?' st-done':''}`);
     const top  = mkEl('div','dc-top');
-    const n    = mkEl('div','dc-name'); n.textContent=`👥 ${t.emps.join(', ')}`; top.appendChild(n);
+    const nm   = mkEl('div','dc-name'); nm.textContent = `👥 ${t.emps.join(', ')}`; top.appendChild(nm);
     if (t.rok) { const tm=mkEl('div','dc-time'); tm.textContent=`⏰ ${t.rok}`; top.appendChild(tm); }
     card.appendChild(top);
-    const p = mkEl('div','dc-task o'); p.textContent=`📍 ${t.posao}`; card.appendChild(p);
+    const p = mkEl('div','dc-task o'); p.textContent = `📍 ${t.posao}`; card.appendChild(p);
+    if (t.klijent) {
+        const kl = mkEl('span','dc-client'); kl.textContent = `🏢 ${t.klijent}`; card.appendChild(kl);
+    }
     const grid = mkEl('div','dt-grid');
     [{lbl:'Vozilo',val:t.vozilo},{lbl:'Rok izlaska',val:t.rok||'—'},{lbl:'Pakuje kombi',val:t.pak},{lbl:'Glavni montaža',val:t.mont}]
         .forEach(item => {
             const cell = mkEl('div');
-            const l=mkEl('div','dt-lbl'); l.textContent=item.lbl;
-            const v=mkEl('div','dt-val'); v.textContent=item.val;
+            const l = mkEl('div','dt-lbl'); l.textContent = item.lbl;
+            const v = mkEl('div','dt-val'); v.textContent = item.val;
             cell.appendChild(l); cell.appendChild(v); grid.appendChild(cell);
         });
     card.appendChild(grid);
-    card.appendChild(buildConfirm('Ekipa potvrdila — može na teren'));
+    card.appendChild(buildConfirm('Ekipa potvrdila — može na teren', st));
     return card;
 }
-function buildConfirm(label) {
-    const row = mkEl('div','dc-confirm');
-    const box = mkEl('div','dc-box');
-    const lbl = mkEl('div','dc-confirm-lbl'); lbl.textContent = label;
+
+function buildConfirm(defaultLabel, status) {
+    const st   = status || 'ceka';
+    const conf = STATUS_CONF[st];
+    const row  = mkEl('div','dc-confirm');
+    const box  = mkEl('div', `dc-box ${conf.boxCls}`);
+    const lbl  = mkEl('div', `dc-confirm-lbl ${conf.lblCls}`);
+    lbl.textContent = st === 'ceka' ? defaultLabel : conf.lbl;
     row.appendChild(box); row.appendChild(lbl);
     return row;
 }
 
-function mkEl(tag, cls) { const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+/* ── WHATSAPP SHARE ── */
+async function shareWhatsApp() {
+    const has = S.opste.length || S.radionica.length || S.teren.length;
+    if (!has) { toast('Dodaj bar jedan zadatak','err'); return; }
+
+    const now  = new Date();
+    const time = now.toLocaleTimeString('sr-RS',{hour:'2-digit',minute:'2-digit'});
+    setText('doc-foot-time', `Kreirano: ${fmtDate(S.datum)} u ${time}`);
+    setText('doc-foot-iz',   `Izdao: ${S.izdavalac || 'Uprava'}`);
+
+    const area = document.getElementById('export-area');
+    window.scrollTo(0,0);
+    toast('Pripremam nalog...','');
+
+    try {
+        const canvas = await html2canvas(area, {scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false});
+        const fname  = `Nalog_${(S.datum||'').replace(/-/g,'')}_${S.smena.replace(/ /g,'')}.png`;
+
+        if (navigator.share) {
+            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            const file = new File([blob], fname, {type:'image/png'});
+            if (navigator.canShare && navigator.canShare({files:[file]})) {
+                await navigator.share({files:[file], title:'Radni Nalog — Pergole Pro'});
+                toast('Nalog podijeljen','ok');
+                return;
+            }
+        }
+        openWhatsAppUrl();
+    } catch(e) {
+        if (e && e.name === 'AbortError') return;
+        openWhatsAppUrl();
+    }
+}
+
+function openWhatsAppUrl() {
+    const txt = buildWhatsAppText();
+    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
+    toast('WhatsApp otvoren — pošalji i sliku ručno','');
+}
+
+function buildWhatsAppText() {
+    let t = `*Radni Nalog — Pergole Pro*\n`;
+    t += `📅 ${fmtDate(S.datum)}  |  ${S.smena}\n`;
+    if (S.izdavalac) t += `Nalog izdao: ${S.izdavalac}\n`;
+    if (S.opste.length) {
+        t += `\n📢 *Obaveštenja:*\n`;
+        S.opste.forEach(o => { t += `• ${o}\n`; });
+    }
+    if (S.radionica.length) {
+        t += `\n🏭 *Radionica:*\n`;
+        S.radionica.forEach(r => {
+            t += `• ${r.emps.join(', ')} — ${r.faza}`;
+            if (r.klijent) t += `  (${r.klijent})`;
+            if (r.rok) t += `  ⏰ ${r.rok}`;
+            if (r.prior === 'hitno') t += `  🔴 HITNO`;
+            t += '\n';
+        });
+    }
+    if (S.teren.length) {
+        t += `\n🚐 *Teren / Montaža:*\n`;
+        S.teren.forEach(r => {
+            t += `• ${r.emps.join(', ')} — ${r.posao}`;
+            if (r.klijent) t += `  (${r.klijent})`;
+            if (r.rok) t += `  ⏰ ${r.rok}`;
+            t += `\n  🚐 ${r.vozilo}  |  Pakuje: ${r.pak}  |  Majstor: ${r.mont}\n`;
+        });
+    }
+    return t;
+}
+
+/* ── HELPERS ── */
+function mkEl(tag, cls) { const e=document.createElement(tag); if(cls) e.className=cls.trim(); return e; }
 function setText(id, txt) { const e=document.getElementById(id); if(e) e.textContent=txt; }
 function clearInputs(ids) { ids.forEach(id => { const e=document.getElementById(id); if(e) e.value=''; }); }
 
@@ -938,6 +1137,13 @@ function exportSlika() {
             toast('Nalog preuzet','ok');
         })
         .catch(() => toast('Greška pri izvozu','err'));
+}
+
+/* ── SERVICE WORKER (PWA) ── */
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
 }
 </script>
 </body>
