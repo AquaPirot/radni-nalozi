@@ -4,40 +4,29 @@ declare(strict_types=1);
 require __DIR__ . '/_init.php';
 session_boot();
 
-// Stranice: ključ → [view, dozvoljene uloge (prazno = svi prijavljeni), naslov, aktivni tab]
+// ?p=… → [handler u montaza-app/pages/, dozvoljene uloge (prazno = svi prijavljeni)]
 $routes = [
-    'projekti'    => ['projekti',    [],          'Projekti',    'projekti'],
-    'plan'        => ['plan',        ['vlasnik'], 'Plan',        'plan'],
-    'izvestaj'    => ['izvestaj',    ['vlasnik'], 'Izveštaj',    'izvestaj'],
-    'podesavanja' => ['podesavanja', ['vlasnik'], 'Podešavanja', 'podesavanja'],
+    'projekti'    => ['projekti',       []],
+    'projekat'    => ['projekat',       []],
+    'novi'        => ['projekat_forma', ['vlasnik']],
+    'izmeni'      => ['projekat_forma', ['vlasnik']],
+    'plan'        => ['plan',           ['vlasnik']],
+    'izvestaj'    => ['izvestaj',       ['vlasnik']],
+    'podesavanja' => ['podesavanja',    ['vlasnik']],
 ];
 
 $p = (string) ($_GET['p'] ?? 'projekti');
 
 if ($p === 'login') {
-    if (current_user()) {
-        redirect(url());
-    }
-    $error = null;
-    $username = '';
-    if (is_post()) {
-        csrf_check();
-        $username = trim((string) ($_POST['username'] ?? ''));
-        $error = attempt_login($username, (string) ($_POST['password'] ?? ''), !empty($_POST['remember']));
-        if ($error === null) {
-            redirect(url());
-        }
-    }
-    view('login', ['title' => 'Prijava', 'error' => $error, 'username' => $username], false);
+    require APP_DIR . '/pages/login.php';
     exit;
 }
 
 if (!isset($routes[$p])) {
-    http_response_code(404);
-    $p = 'projekti';
+    redirect(url());
 }
 
-[$viewName, $roles, $title, $tab] = $routes[$p];
+[$handler, $roles] = $routes[$p];
 $user = $roles ? require_role(...$roles) : require_login();
 
-view($viewName, ['title' => $title, 'tab' => $tab, 'user' => $user]);
+require APP_DIR . '/pages/' . $handler . '.php';

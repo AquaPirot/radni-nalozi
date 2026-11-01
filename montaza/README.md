@@ -14,7 +14,7 @@ Ako hosting ne dozvoljava folder van `public_html`, stavi `montaza-app/` **unuta
 ## Status
 
 - [x] Faza 1 — Temelj (šema, login, uloge, instalacija, layout)
-- [ ] Faza 2 — Projekti
+- [x] Faza 2 — Projekti (novi, lista po nedeljama, detalj, izmena, brisanje, slike i PDF)
 - [ ] Faza 3 — Stavke i pravila
 - [ ] Faza 4 — Plan
 - [ ] Faza 5 — Izveštaj

@@ -11,7 +11,7 @@ Options -Indexes
 </IfModule>
 
 # Zabrani pristup pomoćnim fajlovima
-<FilesMatch "^(_init\.php|.*\.(sql|md|log|example))$">
+<FilesMatch "^(_.*\.php|\.user\.ini|.*\.(sql|md|log|example))$">
     Require all denied
 </FilesMatch>
 

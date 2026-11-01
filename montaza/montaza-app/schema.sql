@@ -160,7 +160,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- Podrazumevana podešavanja (vlasnik ih menja iz aplikacije)
 INSERT IGNORE INTO settings (`key`, `value`) VALUES
-    ('weekly_capacity',        '4'),
+    ('weekly_capacity',        '5'),
     ('min_photos_hala',        '1'),
     ('min_photos_montaza',     '3'),
     ('currency',               'EUR'),
