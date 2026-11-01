@@ -1,10 +1,11 @@
 <?php /** @var ?string $error  @var string $username */ ?>
 <!doctype html>
-<html lang="sr">
+<html lang="sr" data-theme="dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0E0F11">
+    <script>(function(){var t='dark';try{t=localStorage.getItem('mz-theme')||'dark'}catch(e){}document.documentElement.setAttribute('data-theme',t)})()</script>
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png">
     <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">

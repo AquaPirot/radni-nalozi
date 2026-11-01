@@ -155,6 +155,12 @@
             return;
         }
         if (form.dataset.submitting) { e.preventDefault(); return; }
+        if ((form.method || '').toLowerCase() === 'post' && navigator.onLine === false) {
+            e.preventDefault();
+            saveDraftNow(form);
+            netBanner(true, 'Nema veze — ništa nije poslato. ' + (form.dataset.autosave ? 'Uneto je sačuvano na telefonu; ' : '') + 'pošalji ponovo kad se veza vrati.');
+            return;
+        }
         // Vrednost kliknutog dugmeta (npr. "Sačuvaj nacrt" / "Pusti u realizaciju") mora da stigne
         if (e.submitter && e.submitter.name) {
             const h = document.createElement('input');
@@ -166,7 +172,10 @@
         form.dataset.submitting = '1';
         const buttons = form.querySelectorAll('button[type=submit]');
         buttons.forEach((b) => { b.disabled = true; });
-        clearDraft(form);
+        // Nacrt se briše tek kad server potvrdi (sledeća strana), ne pri slanju — slaba veza ne sme da izgubi unos
+        if (form.dataset.autosave) {
+            try { sessionStorage.setItem('mz-sent', JSON.stringify({ key: draftKey(form), path: location.pathname + location.search })); } catch (_) {}
+        }
         setTimeout(() => { delete form.dataset.submitting; buttons.forEach((b) => { b.disabled = false; }); }, 15000);
     });
 
@@ -209,6 +218,32 @@
         const form = e.target.closest && e.target.closest('form[data-gate]');
         if (form) gate(form);
     });
+
+    // ══ Tema: tamna → svetla → kao telefon (pamti se na ovom uređaju) ══
+    const THEMES = ['dark', 'light', 'system'];
+    const THEME_NAMES = { dark: 'Tamna tema', light: 'Svetla tema', system: 'Tema kao na telefonu' };
+    function applyTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        const light = t === 'light' || (t === 'system' && window.matchMedia('(prefers-color-scheme: light)').matches);
+        const meta = document.querySelector('meta[name=theme-color]');
+        if (meta) meta.content = light ? '#F3F4F1' : '#0E0F11';
+        document.querySelectorAll('[data-theme-toggle]').forEach((b) => { b.title = THEME_NAMES[t]; b.setAttribute('aria-label', THEME_NAMES[t]); });
+    }
+    applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+    document.querySelectorAll('[data-theme-toggle]').forEach((b) => b.addEventListener('click', () => {
+        const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
+        try { localStorage.setItem('mz-theme', next); } catch (_) {}
+        applyTheme(next);
+        toastTheme(THEME_NAMES[next]);
+    }));
+    function toastTheme(msg) {
+        let t = document.querySelector('.toast');
+        if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+        t.textContent = msg; t.classList.add('show');
+        clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1600);
+    }
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', () => applyTheme(document.documentElement.getAttribute('data-theme') || 'dark'));
 
     // ══ Rok zadatka: "Bez roka" isključuje datum i vreme ══════
     function syncDeadline(box) {
@@ -314,6 +349,35 @@
         }, 600));
     }
     function clearDraft(form) { try { if (form.dataset.autosave) localStorage.removeItem(draftKey(form)); } catch (_) {} }
+    function saveDraftNow(form) {
+        if (!form || !form.dataset.autosave) return;
+        try { localStorage.setItem(draftKey(form), JSON.stringify({ t: Date.now(), d: serialize(form) })); } catch (_) {}
+    }
+    // Posle slanja: uspeh (druga strana ili zelena poruka) → obriši nacrt; greška → nacrt ostaje
+    try {
+        const sent = JSON.parse(sessionStorage.getItem('mz-sent') || 'null');
+        if (sent) {
+            sessionStorage.removeItem('mz-sent');
+            const okHere = document.querySelector('.alert.ok');
+            const errHere = document.querySelector('.alert.warn, .field-err');
+            if ((location.pathname + location.search !== sent.path || okHere) && !errHere) localStorage.removeItem(sent.key);
+        }
+    } catch (_) {}
+
+    // Traka "nema veze"
+    function netBanner(show, msg) {
+        let b = document.querySelector('.net-banner');
+        if (!b) {
+            b = document.createElement('div'); b.className = 'net-banner'; b.setAttribute('role', 'status');
+            document.body.appendChild(b);
+        }
+        b.textContent = msg || 'Nema veze sa internetom — unos se čuva na telefonu, šalje se kad se veza vrati.';
+        b.classList.toggle('show', show);
+    }
+    window.addEventListener('offline', () => netBanner(true));
+    window.addEventListener('online', () => { netBanner(true, 'Veza je ponovo tu.'); setTimeout(() => netBanner(false), 2000); });
+    if (navigator.onLine === false) netBanner(true);
+
     document.querySelectorAll('form[data-autosave]').forEach((form) => {
         let saved = null;
         try { saved = JSON.parse(localStorage.getItem(draftKey(form)) || 'null'); } catch (_) {}

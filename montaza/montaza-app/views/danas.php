@@ -77,6 +77,7 @@ $visitBlock = function (array $v, bool $big) use ($user): string {
         <a class="kpi" href="<?= e(url('pregled', ['f' => 'naplata'])) ?>"><?= icon('cash', 22) ?><strong class="mono"><?= e(fmt_money((string) $paySum)) ?></strong><span>Za naplatu</span></a>
     </div>
 
+    <div class="dash-cols"><div class="stack">
     <section class="stack">
         <h2 class="sec-head"><span>POTREBNA REAKCIJA</span><?php if (count($decisions) > 4): ?><a href="<?= e(url('pregled', ['f' => 'odluka'])) ?>">sve (<?= count($decisions) ?>) ›</a><?php endif; ?></h2>
         <?php if ($decisions): ?>
@@ -96,6 +97,7 @@ $visitBlock = function (array $v, bool $big) use ($user): string {
         <?php endif; ?>
     </section>
 
+    </div><div class="stack">
     <section class="stack">
         <h2 class="sec-head"><span>DANAS NA TERENU</span><a href="<?= e(url('plan')) ?>">plan ›</a></h2>
         <?php if ($today): foreach ($today as $v) { echo $visitBlock($v, false); } else: ?>
@@ -121,6 +123,7 @@ $visitBlock = function (array $v, bool $big) use ($user): string {
         <?php if ($given): ?><div class="list"><?php foreach ($given as $t) { echo $taskRow($t, true); } ?></div>
         <?php else: ?><p class="small muted">Nema otvorenih zadataka koje si zadao.</p><?php endif; ?>
     </section>
+    </div></div>
     <a class="fab" href="<?= e(url('novi')) ?>"><?= icon('plus') ?><span>Novi projekat</span></a>
 
 <?php elseif ($role === 'teren'):

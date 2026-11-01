@@ -17,11 +17,12 @@ if ($focus) {
 }
 ?>
 <!doctype html>
-<html lang="sr">
+<html lang="sr" data-theme="dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0E0F11">
+    <script>(function(){var t='dark';try{t=localStorage.getItem('mz-theme')||'dark'}catch(e){}document.documentElement.setAttribute('data-theme',t)})()</script>
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png">
     <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
@@ -47,6 +48,7 @@ if ($focus) {
         <div class="top-actions">
             <?= $topExtra ?? '' ?>
             <?php if (!$focus): ?>
+            <button class="icon-btn theme-btn" type="button" data-theme-toggle aria-label="Tema" title="Tema"><span class="ti-dark"><?= icon('moon') ?></span><span class="ti-light"><?= icon('sun') ?></span><span class="ti-system mono">A</span></button>
             <button class="icon-btn push-btn" type="button" data-push-toggle hidden aria-label="Obaveštenja na ovom telefonu"><?= icon('bell') ?></button>
             <?php if ($u && $u['role'] === 'vlasnik'): ?>
                 <a class="icon-btn<?= $tab === 'podesavanja' ? ' on' : '' ?>" href="<?= e(url('podesavanja')) ?>" aria-label="Podešavanja"><?= icon('podesavanja') ?></a>
@@ -87,6 +89,7 @@ if ($focus) {
 
     <?php if (count($nav) > 1): ?>
     <nav class="bottom-nav" aria-label="Glavni meni">
+        <div class="side-brand">AG GROUP<strong>Montaža</strong></div>
         <?php foreach ($nav as [$key, $label, $ic]): ?>
             <a href="<?= e(url($key)) ?>" class="<?= $tab === $key ? 'on' : '' ?>"<?= $tab === $key ? ' aria-current="page"' : '' ?>>
                 <span class="nav-ic"><?= icon($ic, 24) ?><?php if ($key === 'zadaci' && $taskBadge): ?><b class="badge"><?= $taskBadge ?></b><?php endif; ?></span><span><?= e($label) ?></span>
