@@ -46,8 +46,8 @@ $action = $isNew ? url('novi') : url('izmeni', ['id' => $project['id']]);
         <div class="field">
             <span><span class="only-novi">Mesto montaže (obavezno)</span><span class="not-novi">Mesto montaže (preporučeno)</span></span>
             <label class="dropzone" data-preview>
-                <input type="file" name="lokacija" accept="image/*" capture="environment" data-resize>
-                <span class="dz-empty"><?= icon('camera', 28) ?><span>Slikaj ili dodaj fotografiju lokacije</span></span>
+                <input type="file" name="lokacija" accept="image/*" data-resize>
+                <span class="dz-empty"><?= icon('camera', 28) ?><span>Slikaj ili izaberi iz galerije</span></span>
                 <img class="dz-img" alt="" hidden>
             </label>
             <?= $err('lokacija') ?>

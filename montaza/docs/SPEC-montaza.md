@@ -179,7 +179,7 @@ Referentne slike makete su u `docs/` (PNG izvoz). Prati ih po rasporedu i stilu.
 
 ## 8. Fotografije i fajlovi
 
-- Na telefonu: `<input type="file" accept="image/*" capture="environment" multiple>`.
+- Na telefonu: `<input type="file" accept="image/*" multiple>` (bez `capture` — telefon nudi kameru ILI galeriju).
 - **Pre slanja** smanji sliku u browseru (canvas) na max 1600 px duža strana, JPEG ~80% — štedi mobilni internet.
 - Server: proveri pravi MIME (finfo), ponovo enkoduj kroz GD (briše EXIF i maliciozan sadržaj), napravi thumbnail 400 px, čuvaj u `uploads/YYYY/MM/` sa nasumičnim imenom.
 - PDF: samo `application/pdf`, max 15 MB.

@@ -31,7 +31,7 @@ $logLabels = [
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
             <label class="icon-btn" aria-label="<?= $lokacija ? 'Promeni sliku lokacije' : 'Dodaj sliku lokacije' ?>">
-                <input type="file" name="lokacija" accept="image/*" capture="environment" data-resize hidden><?= icon('camera') ?>
+                <input type="file" name="lokacija" accept="image/*" data-resize hidden><?= icon('camera') ?>
             </label>
         </form>
     <?php endif; ?>

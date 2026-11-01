@@ -36,8 +36,8 @@ $payLabel = $p['payment_when'] === 'pre' ? 'Naplaćeno pre početka' : 'Naplaće
                 </div>
             <?php else: ?>
                 <label class="pp-tile pp-shoot" data-preview>
-                    <input type="file" name="posle" accept="image/*" capture="environment" data-resize data-count>
-                    <span class="dz-empty"><?= icon('camera', 30) ?><strong>Slikaj POSLE</strong><span class="small muted">Stani na isto mesto kao na PRE slici</span></span>
+                    <input type="file" name="posle" accept="image/*" data-resize data-count>
+                    <span class="dz-empty"><?= icon('camera', 30) ?><strong>Slika POSLE</strong><span class="small muted">Kamera ili galerija — isto mesto kao na PRE slici</span></span>
                     <img class="dz-img" alt="" hidden>
                 </label>
             <?php endif; ?>
