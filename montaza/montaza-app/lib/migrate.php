@@ -5,7 +5,7 @@ declare(strict_types=1);
 // (i iz install.php). Verzija se čuva u settings.schema_version.
 // Svaka migracija je fajl migrations/NNN_ime.php koji vraća function(PDO $pdo): void.
 
-const SCHEMA_TARGET = 3;
+const SCHEMA_TARGET = 4;
 
 function schema_version(): int
 {

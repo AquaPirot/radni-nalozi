@@ -1,9 +1,9 @@
 {
   "name": "Montaža — AG GROUP",
   "short_name": "Montaža",
-  "description": "Praćenje projekata pergola: proizvodnja, montaža, zadaci",
+  "description": "Projekti, montaže, nalozi i slike — AG GROUP",
   "lang": "sr-Latn",
-  "start_url": "/?p=danas&src=app",
+  "start_url": "/?p=projekti&src=app",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -32,35 +32,26 @@
   "id": "/",
   "shortcuts": [
     {
-      "name": "Danas",
-      "short_name": "Danas",
-      "url": "/?p=danas",
+      "name": "Montaže",
+      "short_name": "Montaže",
+      "url": "/?p=montaze",
       "icons": [
         {
           "src": "/assets/icons/icon-192.png",
-          "sizes": "192x192"
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     },
     {
-      "name": "Moji zadaci",
-      "short_name": "Zadaci",
-      "url": "/?p=zadaci",
+      "name": "Projekti",
+      "short_name": "Projekti",
+      "url": "/?p=projekti",
       "icons": [
         {
           "src": "/assets/icons/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "Novi zadatak",
-      "short_name": "Novi zadatak",
-      "url": "/?p=novi_zadatak",
-      "icons": [
-        {
-          "src": "/assets/icons/icon-192.png",
-          "sizes": "192x192"
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     }

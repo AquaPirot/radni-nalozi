@@ -242,6 +242,15 @@
         if (e.key === 'Escape') document.querySelectorAll('details[data-menu][open]').forEach((d) => { d.open = false; });
     });
 
+    // ══ Forma projekta: polja koja važe samo za određenu vrstu posla ══
+    function syncType() {
+        const r = document.querySelector('input[name=type][data-type]:checked');
+        if (!r) return;
+        document.querySelectorAll('[data-only]').forEach((el) => { el.hidden = !el.dataset.only.split(' ').includes(r.value); });
+    }
+    document.querySelectorAll('input[name=type][data-type]').forEach((r) => r.addEventListener('change', syncType));
+    syncType();
+
     // ══ Rok zadatka: "Bez roka" isključuje datum i vreme ══════
     function syncDeadline(box) {
         const wrap = box.closest('.field');

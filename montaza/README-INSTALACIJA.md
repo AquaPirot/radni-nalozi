@@ -103,6 +103,22 @@ Proba bez slanja: `php dnevni.php --dry-run`.
 
 ---
 
+## Jednostavna verzija (v3) — ažuriranje postojeće aplikacije
+
+Aplikacija ima tri ekrana: **Projekti**, **Montaže** i **Izveštaj**. Svi projekti, slike, komentari i nalozi ostaju.
+
+1. *(preporuka)* phpMyAdmin → baza → **Export** → **Go**.
+2. File Manager → folder subdomena → **Otpremi** `montaza-azuriranje-*.zip` → **Izdvoji** u isti folder → zameni postojeće → obriši ZIP.
+3. Otvori sajt. Baza se sama dopuni:
+   - svaki projekat dobije stavke kao u prvoj verziji (nalog, čelik, aluminijum, cerada, pakovanje, montaža) sa stanjem koje je već urađeno;
+   - datum montaže se prepiše iz termina.
+4. **Cron:** zameni stare poslove sa ova dva (komanda je ista, samo je posao drugačiji):
+   - `5 7 * * *` → `/usr/local/bin/php /home/KORISNIK/montaza.aggroup.rs/montaza-app/cron/dnevni.php`
+   - `5 18 * * *` → ista komanda + ` --vece`
+5. Na telefonima: zatvori Montažu i otvori je ponovo.
+
+Zadaci, naplata, ekipe i sistemi više se ne prikazuju. Njihovi podaci ostaju u bazi.
+
 ## Prelazak na verziju 2 (aplikacija je već instalirana i radi)
 
 Podaci ostaju sačuvani: projekti, slike, zadaci, uplate i nalozi. **Ne** uvoziš SQL i **ne** pokrećeš instalaciju.

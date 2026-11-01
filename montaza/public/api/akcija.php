@@ -26,165 +26,46 @@ if (!once_check()) {
 }
 
 $id = (int) ($_POST['id'] ?? 0);
-$owner = fn() => $user['role'] === 'vlasnik' ? true : throw new RuleError('Samo vlasnik.');
 $project = fn() => load_project($id) ?? throw new RuleError('Projekat ne postoji.');
 
 try {
     switch ((string) ($_POST['action'] ?? '')) {
-        // ── Projekat ──
-        case 'release':
-            $owner();
-            $p = $project();
-            $b = bundle_one($id);
-            $in = project_input(['work_type' => $p['work_type'], 'intake' => $p['intake'], 'customer_name' => $p['customer_name'], 'city' => $p['city'],
-                'deadline' => $p['deadline'], 'payment_when' => $p['payment_when'], 'payment_amount' => $p['payment_amount'], 'payment_collector' => $p['payment_collector'],
-                'systems' => array_map(fn($s) => ['id' => $s['id'], 'type_id' => $s['system_type_id'], 'qty' => $s['qty'], 'width' => $s['width'], 'note' => $s['note']], $b['systems'])]);
-            $hasLok = (bool) q_val("SELECT 1 FROM files WHERE project_id = ? AND kind = 'lokacija_pre'", [$id]);
-            if ($err = validate_project($in, true, $hasLok)) {
-                throw new RuleError('Pre puštanja u realizaciju fali: ' . implode(' ', $err));
+        case 'install':
+            $date = parse_date($_POST['install_date'] ?? '');
+            if (trim((string) ($_POST['install_date'] ?? '')) !== '' && !$date) {
+                throw new RuleError('Neispravan datum.');
             }
-            project_release($id, $in, $user);
-            flash('ok', 'Projekat je pušten u realizaciju.');
+            project_set_install($project(), $date, parse_time($_POST['install_time'] ?? ''), $user);
+            flash('ok', $date ? 'Montaža: ' . install_when(load_project($id), false) . ' — teren i hala su obavešteni.' : 'Datum montaže je uklonjen.');
             break;
-        case 'archive':
-            $owner();
-            project_archive($project(), $user);
-            flash('ok', 'Projekat je arhiviran. Vraća se iz filtera „Arhiva".');
-            $back = url('projekti');
+        case 'nalog':
+            nalog_upload($project(), posted_ids('file_id')[0] ?? 0, $user);
+            flash('ok', 'Nalog je sačuvan — hala je obaveštena.');
             break;
-        case 'restore':
-            $owner();
-            project_restore($project(), $user);
-            flash('ok', 'Projekat je vraćen iz arhive.');
+        case 'photos':
+            $n = photos_add($project(), posted_ids('foto_ids'), $user);
+            flash('ok', $n ? "Sačuvano slika: $n." : 'Nijedna slika nije stigla — pokušaj ponovo.');
             break;
-        case 'delete':
-            $owner();
-            $p = $project();
-            if (!$p['archived_at']) {
-                throw new RuleError('Trajno se brišu samo arhivirani projekti.');
-            }
-            project_delete($p);
-            flash('ok', 'Projekat ' . $p['code'] . ' je trajno obrisan.');
-            $back = url('projekti', ['f' => 'arhiva']);
+        case 'item_start':
+            item_start($id, $user);
+            flash('ok', 'U radu.');
             break;
-        case 'lokacija':
-            $owner();
-            set_lokacija_photo($project(), posted_ids('file_id')[0] ?? 0, $user);
-            flash('ok', 'Slika lokacije je sačuvana.');
+        case 'item_reset':
+            item_reset($id, $user);
+            flash('ok', 'Stavka je vraćena na „čeka".');
             break;
-        case 'order_issue':
-            $owner();
-            $fid = posted_ids('file_id')[0] ?? 0;
-            if (!$fid) {
-                throw new RuleError('Izaberi PDF naloga.');
-            }
-            order_issue_from_file($project(), $fid, $user, trim((string) ($_POST['note'] ?? '')));
-            flash('ok', 'Nalog je izdat — hala dobija obaveštenje.');
+        case 'stop_open':
+            stop_open($project(), (string) ($_POST['reason'] ?? ''), (string) ($_POST['note'] ?? ''), $user);
+            flash('ok', 'Zastoj je prijavljen — svi su obavešteni.');
             break;
-        case 'order_accept':
-            order_accept($id, $user);
-            flash('ok', 'Nalog je preuzet.');
-            break;
-
-        // ── Proizvodnja ──
-        case 'phase_start':
-            phase_start($id, $user);
-            flash('ok', 'Faza je u radu.');
-            break;
-        case 'phase_assign':
-            phase_assign($id, (int) ($_POST['assignee_id'] ?? 0) ?: null, parse_date($_POST['due_date'] ?? ''), $user);
-            flash('ok', 'Sačuvano.');
-            break;
-
-        // ── Teren ──
-        case 'visit_start':
-            $paid = parse_amount((string) ($_POST['paid'] ?? ''));
-            visit_start($id, $user, $paid !== null ? (float) $paid : null, (string) ($_POST['method'] ?? 'gotovina'));
-            flash('ok', 'Počelo — srećan rad.');
-            break;
-        case 'visit_cancel':
-            $v = load_visit($id) ?? throw new RuleError('Termin ne postoji.');
-            visit_cancel($v, trim((string) ($_POST['reason'] ?? '')), $user);
-            flash('ok', 'Termin je otkazan.');
-            break;
-
-        // ── Zastoj ──
-        case 'stoppage_resolve':
-            stoppage_resolve($id, $user, trim((string) ($_POST['note'] ?? '')));
+        case 'stop_resolve':
+            stop_resolve($project(), $user);
             flash('ok', 'Zastoj je rešen.');
             break;
-
-        // ── Naplata ──
-        case 'payment_add':
-            $p = $project();
-            if (!can_record_payment($user)) {
-                throw new RuleError('Nemaš pravo.');
-            }
-            $amount = parse_amount((string) ($_POST['amount'] ?? ''));
-            if ($amount === null) {
-                throw new RuleError('Unesi iznos.');
-            }
-            payment_add($p, (float) $amount, (string) ($_POST['method'] ?? 'gotovina'), $user, null, trim((string) ($_POST['note'] ?? '')));
-            flash('ok', 'Uplata je evidentirana.');
-            break;
-        case 'cash_handover':
-            $n = payments_handover(posted_ids('ids'), $user);
-            flash('ok', "Potvrđeno: primljeno $n " . ($n === 1 ? 'uplata' : 'uplate') . '.');
-            break;
-
-        // ── Komentar na projektu (svi) ──
         case 'project_comment':
             project_comment_add($project(), $user, (string) ($_POST['body'] ?? ''), posted_ids('file_id')[0] ?? null);
-            flash('ok', 'Komentar je poslat — ostali dobijaju obaveštenje.');
+            flash('ok', 'Komentar je poslat.');
             break;
-
-        // ── Zadaci ──
-        case 'task_done':
-            $t = load_task($id) ?? throw new RuleError('Zadatak ne postoji.');
-            if ($t['requires_photo']) {
-                redirect(url('zadatak_zavrsi', ['id' => $id]));
-            }
-            task_complete($id, $user, trim((string) ($_POST['note'] ?? '')), []);
-            flash('ok', 'Završeno: ' . $t['title']);
-            break;
-        case 'task_start':
-            task_start($id, $user);
-            flash('ok', 'Zadatak je u radu.');
-            break;
-        case 'task_accept':
-            task_accept($id, $user);
-            flash('ok', 'Preuzeto.');
-            break;
-        case 'task_reopen':
-            task_reopen($id, $user, (string) ($_POST['reason'] ?? ''));
-            flash('ok', 'Zadatak je ponovo otvoren.');
-            break;
-        case 'task_comment':
-            $t = load_task($id);
-            if (!$t || !can_view_task($user, $t)) {
-                throw new RuleError('Zadatak ne postoji.');
-            }
-            $body = trim((string) ($_POST['body'] ?? ''));
-            $fid = posted_ids('file_id')[0] ?? null;
-            if ($body === '' && !$fid) {
-                throw new RuleError('Upiši komentar ili dodaj sliku.');
-            }
-            task_comment($id, $user, 'komentar', $body, $fid);
-            $other = (int) $t['assigned_to'] === (int) $user['id'] ? (int) $t['created_by'] : (int) $t['assigned_to'];
-            if ($other && $other !== (int) $user['id']) {
-                notify_user($other, $user['name'] . ' — „' . $t['title'] . '": ' . ($body !== '' ? $body : '(slika)'), url('zadatak', ['id' => $id]));
-            }
-            break;
-        case 'task_delete':
-            $t = load_task($id) ?? throw new RuleError('Zadatak ne postoji.');
-            if (!can_edit_task($user, $t)) {
-                throw new RuleError('Nemaš pravo da obrišeš ovaj zadatak.');
-            }
-            task_delete($t);
-            flash('ok', 'Zadatak je obrisan.');
-            $back = url('zadaci');
-            break;
-
         default:
             http_response_code(400);
             exit;

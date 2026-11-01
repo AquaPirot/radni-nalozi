@@ -55,7 +55,7 @@ function recent_comments(int $exceptUserId, int $days, int $limit): array
     );
     return array_map(fn($r) => $r + [
         'where' => $r['pid'] ? $r['what'] . ($r['city'] ? ', ' . $r['city'] : '') : 'zadatak „' . $r['what'] . '"',
-        'url'   => $r['pid'] ? url('projekat', ['id' => $r['pid']]) . '#komentari' : url('zadatak', ['id' => $r['tid']]),
+        'url'   => $r['pid'] ? url('projekat', ['id' => $r['pid']]) . '#komentari' : url('projekti'),
     ], $rows);
 }
 

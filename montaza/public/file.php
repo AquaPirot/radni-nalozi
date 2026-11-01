@@ -12,15 +12,8 @@ if (!$user) {
 }
 
 $file = q_one('SELECT * FROM files WHERE id = ?', [(int) ($_GET['id'] ?? 0)]);
-$allowed = false;
-if ($file && $file['pending']) {
-    $allowed = (int) $file['uploaded_by'] === (int) $user['id']; // upravo poslato, još nije zakačeno
-} elseif ($file && $file['task_id']) {
-    $task = load_task((int) $file['task_id']);
-    $allowed = $task && can_view_task($user, $task);
-} elseif ($file && $file['project_id']) {
-    $allowed = can_view_project($user, (int) $file['project_id']);
-}
+// Svi prijavljeni vide sve; fajl koji je upravo poslat (još nije zakačen) vidi samo onaj ko ga je poslao.
+$allowed = $file && (!$file['pending'] || (int) $file['uploaded_by'] === (int) $user['id']);
 if (!$allowed) {
     http_response_code(404);
     exit;

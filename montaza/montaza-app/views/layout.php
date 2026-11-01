@@ -3,13 +3,10 @@
 $u   = current_user();
 $tab = $tab ?? '';
 $nav = [
-    ['danas',    'Danas',    'home',     []],
     ['projekti', 'Projekti', 'projekti', []],
-    ['zadaci',   'Zadaci',   'zadaci',   []],
-    ['plan',     'Plan',     'plan',     []],
+    ['montaze',  'Montaže',  'plan',     []],
     ['izvestaj', 'Izveštaj', 'izvestaj', []],
 ];
-$taskBadge = $u ? my_open_tasks((int) $u['id']) : 0;
 $nav = array_values(array_filter($nav, fn($n) => !$n[3] || ($u && in_array($u['role'], $n[3], true))));
 $focus = !empty($focus); // forma: bez donjeg menija i bez podešavanja/odjave
 if ($focus) {
@@ -101,7 +98,7 @@ if ($focus) {
         <div class="side-brand">AG GROUP<strong>Montaža</strong></div>
         <?php foreach ($nav as [$key, $label, $ic]): ?>
             <a href="<?= e(url($key)) ?>" class="<?= $tab === $key ? 'on' : '' ?>"<?= $tab === $key ? ' aria-current="page"' : '' ?>>
-                <span class="nav-ic"><?= icon($ic, 24) ?><?php if ($key === 'zadaci' && $taskBadge): ?><b class="badge"><?= $taskBadge ?></b><?php endif; ?></span><span><?= e($label) ?></span>
+                <span class="nav-ic"><?= icon($ic, 24) ?></span><span><?= e($label) ?></span>
             </a>
         <?php endforeach; ?>
     </nav>

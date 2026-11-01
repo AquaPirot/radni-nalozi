@@ -2,14 +2,12 @@
 declare(strict_types=1);
 
 // Dnevni poslovi. cPanel → Cron Jobs (zameni KORISNIK svojim nalogom):
-//   jutro (7:05):  5 7 * * *   /usr/local/bin/php /home/KORISNIK/montaza-app/cron/dnevni.php
-//   veče (18:05):  5 18 * * *  /usr/local/bin/php /home/KORISNIK/montaza-app/cron/dnevni.php --vece
+//   jutro (7:05):  5 7 * * *   /usr/local/bin/php /home/KORISNIK/montaza.aggroup.rs/montaza-app/cron/dnevni.php
+//   veče (18:05):  5 18 * * *  /usr/local/bin/php /home/KORISNIK/montaza.aggroup.rs/montaza-app/cron/dnevni.php --vece
 //
-// Jutro:  današnji termini ekipama · rokovi (zadaci, faze, projekti) · ponedeljkom pregled nedelje vlasniku
-//         · čišćenje neposlatih slika · rezervna kopija baze (čuva poslednjih 14).
-// Veče:   sutrašnji termini ekipama i hali (šta treba da bude spremno).
-// Probni rad bez slanja:  php dnevni.php --dry-run   (ili --vece --dry-run)
-// Ponovno pokretanje istog dana ne šalje ponovo (osim sa --force).
+// Jutro: današnje montaže svima · ponedeljkom montaže ove nedelje · čišćenje neposlatih slika · rezervna kopija baze.
+// Veče:  sutrašnje montaže svima; ako proizvod nije gotov — upozorenje.
+// Probni rad bez slanja: php dnevni.php --dry-run   (ili --vece --dry-run). Isti dan se ne šalje dvaput (osim --force).
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -22,14 +20,18 @@ $dry = in_array('--dry-run', $args, true);
 $evening = in_array('--vece', $args, true);
 $force = in_array('--force', $args, true);
 $todayS = today()->format('Y-m-d');
-$tomorrowS = today()->modify('+1 day')->format('Y-m-d');
+$runKey = $evening ? 'cron_last_evening' : 'cron_last_morning';
+if (!$force && !$dry && setting($runKey) === $todayS) {
+    echo "Već pokrenuto danas.\n";
+    exit;
+}
 $sent = 0;
 
-/** Kratko na telefon (push), duže na Telegram ako je povezan. */
-function cron_send(array $u, string $title, string $short, string $long, ?string $link, bool $dry, int &$sent): void
+/** Kratko na telefon, duže na Telegram (ako je povezan). */
+function cron_send(array $u, string $title, string $short, string $long, string $link, bool $dry, int &$sent): void
 {
     if ($dry) {
-        echo "── {$u['name']}: $title\n   push: $short\n" . ($long !== $short ? preg_replace('/^/m', '   ', $long) . "\n" : '');
+        echo "── {$u['name']}: $title\n   push: $short\n" . preg_replace('/^/m', '   ', $long) . "\n";
         return;
     }
     try {
@@ -38,7 +40,7 @@ function cron_send(array $u, string $title, string $short, string $long, ?string
         if ($chat === '' && $u['role'] === 'vlasnik') {
             $chat = (string) setting('telegram_owner_chat_id', '');
         }
-        if ($chat !== '' && !telegram_send($chat, $title . "\n\n" . $long . ($link ? "\n\n$link" : ''))) {
+        if ($chat !== '' && !telegram_send($chat, $title . "\n\n" . $long . "\n\n" . $link)) {
             $sent++;
         }
     } catch (Throwable $ex) {
@@ -46,57 +48,34 @@ function cron_send(array $u, string $title, string $short, string $long, ?string
     }
 }
 
-function visit_line(array $v): string
+/** Aktivni projekti sa montažom u periodu, kojima terenska stavka nije završena. */
+function installs_between(string $from, string $to): array
 {
-    return ($v['start_time'] ? substr($v['start_time'], 0, 5) . ' ' : '') . $v['customer_name'] . ($v['city'] ? ', ' . $v['city'] : '')
-        . ' — ' . mb_strtolower(VISIT_KINDS[$v['kind']]) . ((int) $v['days'] > 1 ? ' (' . $v['days'] . ' d)' : '') . ($v['confirmed'] ? '' : ' · okvirno');
+    return bundle(q_all("SELECT p.* FROM projects p WHERE p.status = 'aktivan' AND p.install_date BETWEEN ? AND ?
+                         AND EXISTS (SELECT 1 FROM project_items i WHERE i.project_id = p.id AND i.kind IN ('montaza','servis','dijagnoza') AND i.status <> 'zavrseno')
+                         ORDER BY p.install_date, p.install_time IS NULL, p.install_time", [$from, $to]));
+}
+
+function install_line(array $b, bool $withDay = false): string
+{
+    $p = $b['p'];
+    $ready = ready_for_field($b['items']) ? '' : ' — NIJE SPREMNO (' . mb_strtolower(ITEM_LABELS[current_item($b['items'])['kind']] ?? '') . ')';
+    return ($withDay ? install_when($p, false) : ($p['install_time'] ? substr((string) $p['install_time'], 0, 5) : 'ceo dan')) . ' · '
+        . project_ref($p) . ($p['address'] ? ', ' . $p['address'] : '') . ($p['phone'] ? ' · ' . $p['phone'] : '') . $ready;
 }
 
 $users = q_all('SELECT * FROM users WHERE active = 1');
-$byId = array_column($users, null, 'id');
-$runKey = $evening ? 'cron_last_evening' : 'cron_last_morning';
-if (!$force && !$dry && setting($runKey) === $todayS) {
-    echo "Već pokrenuto danas.\n";
-    exit;
-}
-
-// ── Termini po ekipi (danas ujutru / sutra uveče) ──
-$day = $evening ? $tomorrowS : $todayS;
-$dayVisits = visits_between($day, $day);
-$byLeader = [];
-foreach ($dayVisits as $v) {
-    $leader = (int) ($v['leader_id'] ?: 0);
-    $byLeader[$leader][] = $v;
-}
-foreach ($users as $u) {
-    if ($u['role'] !== 'teren') {
-        continue;
-    }
-    $mine = array_merge($byLeader[(int) $u['id']] ?? [], $byLeader[0] ?? []);
-    if (!$mine) {
-        continue;
-    }
-    $lines = array_map('visit_line', $mine);
-    $title = ($evening ? 'Sutra' : 'Danas') . ' na terenu: ' . count($mine);
-    cron_send($u, $title, implode(' · ', array_map(fn($v) => $v['customer_name'], $mine)), '• ' . implode("\n• ", $lines), url('danas'), $dry, $sent);
-}
+$link = url('montaze');
 
 if ($evening) {
-    // Hali: sutrašnje montaže čiji proizvod nije gotov
-    $pids = array_values(array_unique(array_map('intval', array_column($dayVisits, 'pid'))));
-    $bundles = $pids ? bundle(q_all('SELECT * FROM projects WHERE id IN (' . in_list($pids) . ')', $pids)) : [];
-    $notReady = [];
-    foreach ($bundles as $b) {
-        if ($b['phases'] && !phases_done($b['phases'])) {
-            $left = array_filter($b['phases'], fn($ph) => $ph['status'] !== 'zavrseno');
-            $notReady[] = project_ref($b['p']) . ' — fali: ' . implode(', ', array_unique(array_column($left, 'name')));
-        }
-    }
-    if ($notReady) {
+    $tomorrow = today()->modify('+1 day')->format('Y-m-d');
+    $list = installs_between($tomorrow, $tomorrow);
+    if ($list) {
+        $notReady = array_filter($list, fn($b) => !ready_for_field($b['items']));
+        $title = 'Sutra montaža: ' . count($list) . ($notReady ? ' · nije spremno: ' . count($notReady) : '');
+        $long = '• ' . implode("\n• ", array_map('install_line', $list));
         foreach ($users as $u) {
-            if (in_array($u['role'], ['hala', 'vlasnik'], true)) {
-                cron_send($u, 'Sutra montaža, a proizvod nije gotov (' . count($notReady) . ')', $notReady[0], '• ' . implode("\n• ", $notReady), url('danas'), $dry, $sent);
-            }
+            cron_send($u, $title, implode(' · ', array_map(fn($b) => $b['p']['customer_name'], $list)), $long, $link, $dry, $sent);
         }
     }
     if (!$dry) {
@@ -106,74 +85,27 @@ if ($evening) {
     exit;
 }
 
-// ── Rokovi: zadaci (danas / kasni), faze, projekti ──
-foreach ($users as $u) {
-    $tasks = q_all(
-        "SELECT * FROM tasks WHERE assigned_to = ? AND status <> 'zavrseno' AND archived_at IS NULL AND due_date IS NOT NULL AND due_date <= ?
-         ORDER BY due_date, due_time IS NULL, due_time",
-        [$u['id'], $todayS]
-    );
-    $phases = q_all(
-        "SELECT ph.*, p.customer_name, p.city FROM production_phases ph JOIN projects p ON p.id = ph.project_id
-         WHERE ph.assignee_id = ? AND ph.status <> 'zavrseno' AND ph.due_date IS NOT NULL AND ph.due_date <= ?
-           AND p.status = 'aktivan' AND p.archived_at IS NULL ORDER BY ph.due_date",
-        [$u['id'], $todayS]
-    );
-    if (!$tasks && !$phases) {
-        continue;
-    }
-    $lines = [];
-    foreach ($tasks as $t) {
-        $late = days_late($t['due_date']);
-        $lines[] = ($late ? "KASNI $late d · " : 'danas' . ($t['due_time'] ? ' ' . substr($t['due_time'], 0, 5) : '') . ' · ') . $t['title'];
-    }
-    foreach ($phases as $ph) {
-        $late = days_late($ph['due_date']);
-        $lines[] = ($late ? "KASNI $late d · " : 'danas · ') . $ph['name'] . ' — ' . $ph['customer_name'];
-    }
-    cron_send($u, 'Rokovi: ' . count($lines), $lines[0] . (count($lines) > 1 ? ' (+' . (count($lines) - 1) . ')' : ''), '• ' . implode("\n• ", $lines), url('zadaci'), $dry, $sent);
-}
-
-// Projekti čiji rok ističe za 3 dana ili danas, a nisu završeni → vlasnicima
-$soon = q_all(
-    "SELECT * FROM projects WHERE status = 'aktivan' AND archived_at IS NULL AND deadline IN (?, ?) ORDER BY deadline",
-    [$todayS, today()->modify('+3 days')->format('Y-m-d')]
-);
-if ($soon) {
-    $lines = array_map(fn($p) => project_ref($p) . ' — rok ' . ($p['deadline'] === $todayS ? 'DANAS' : fmt_dm($p['deadline'])), $soon);
+// Jutro: danas (+ ponedeljkom cela nedelja)
+$monday = (int) date('N') === 1 || in_array('--nedelja', $args, true);
+$list = installs_between($todayS, $todayS);
+if ($list) {
+    $long = '• ' . implode("\n• ", array_map('install_line', $list));
     foreach ($users as $u) {
-        if ($u['role'] === 'vlasnik') {
-            cron_send($u, 'Rok se bliži: ' . count($soon), $lines[0], '• ' . implode("\n• ", $lines), url('projekti'), $dry, $sent);
-        }
+        cron_send($u, 'Danas montaža: ' . count($list), implode(' · ', array_map(fn($b) => $b['p']['customer_name'], $list)), $long, $link, $dry, $sent);
     }
 }
-
-// ── Ponedeljak: pregled nedelje vlasniku ──
-if ((int) date('N') === 1 || in_array('--nedelja', $args, true)) {
-    $mon = (int) date('N') >= 6 ? week_monday(today()->modify('+7 days')) : week_monday(today());
-    $week = visits_between($mon->format('Y-m-d'), $mon->modify('+6 days')->format('Y-m-d'));
+if ($monday) {
+    $mon = week_monday(today());
+    $week = installs_between($mon->format('Y-m-d'), $mon->modify('+6 days')->format('Y-m-d'));
+    $noDate = (int) q_val("SELECT COUNT(*) FROM projects p WHERE p.status = 'aktivan' AND p.install_date IS NULL");
+    $stops = (int) q_val("SELECT COUNT(*) FROM stoppages s JOIN projects p ON p.id = s.project_id WHERE s.resolved_at IS NULL AND p.status = 'aktivan'");
+    $long = 'MONTAŽE OVE NEDELJE (' . count($week) . "):\n" . ($week ? '• ' . implode("\n• ", array_map(fn($b) => install_line($b, true), $week)) : '• nema')
+        . "\n\nBez datuma montaže: $noDate · Otvoreni zastoji: $stops";
     foreach ($users as $u) {
-        if ($u['role'] !== 'vlasnik') {
-            continue;
-        }
-        $decisions = owner_decisions($u);
-        $stops = open_stops_list($u);
-        $late = late_list($u);
-        [, $due] = due_payments();
-        $cash = (float) q_val("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE method = 'gotovina' AND handed_at IS NULL");
-        $msg = 'TERMINI (' . count($week) . "):\n" . ($week ? '• ' . implode("\n• ", array_map(fn($v) => fmt_dm($v['start_date']) . ' ' . visit_line($v), $week)) : '• nema') . "\n";
-        foreach (['TRAŽI ODLUKU' => $decisions, 'ZASTOJI' => $stops, 'KASNI' => $late] as $h => $list) {
-            if ($list) {
-                $msg .= "\n$h (" . count($list) . "):\n• " . implode("\n• ", array_map(fn($x) => $x['title'] . ' — ' . $x['why'], array_slice($list, 0, 8))) . "\n";
-            }
-        }
-        $msg .= "\nZa naplatu: " . fmt_money((string) $due) . ($cash > 0 ? ' · gotovina kod radnika: ' . fmt_money((string) $cash) : '');
-        $short = 'Termini: ' . count($week) . ' · Odluke: ' . count($decisions) . ' · Zastoji: ' . count($stops) . ' · Kasni: ' . count($late);
-        cron_send($u, 'Pregled nedelje — ' . week_label($mon), $short, $msg, url('danas'), $dry, $sent);
+        cron_send($u, 'Nedelja ' . week_label($mon), 'Montaža: ' . count($week) . ' · bez datuma: ' . $noDate . ' · zastoji: ' . $stops, $long, $link, $dry, $sent);
     }
 }
 
-// ── Održavanje ──
 if (!$dry) {
     $cleaned = cleanup_pending_files();
     $backup = backup_database();

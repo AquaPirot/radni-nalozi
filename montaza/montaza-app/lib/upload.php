@@ -199,7 +199,7 @@ function attach_temp_files(array $ids, ?int $projectId, array $set, int $userId)
     }
     $cols = ['project_id = ?', 'pending = 0'];
     $params = [$projectId];
-    foreach (['phase_id', 'visit_id', 'task_id', 'kind', 'purpose'] as $k) {
+    foreach (['item_id', 'phase_id', 'visit_id', 'task_id', 'kind', 'purpose'] as $k) {
         if (array_key_exists($k, $set)) {
             $cols[] = "$k = ?";
             $params[] = $set[$k];

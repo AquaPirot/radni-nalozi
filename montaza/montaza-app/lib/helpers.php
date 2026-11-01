@@ -172,35 +172,22 @@ function uploader(string $name, string $label, bool $multiple = true, string $ty
 function activity_label(array $l): string
 {
     $d = $l['details'] ? (json_decode((string) $l['details'], true) ?: []) : [];
-    $money = fn($v) => fmt_money((string) $v);
+    $item = fn() => ITEM_LABELS[$d['kind'] ?? ''] ?? ($d['phase'] ?? 'stavka');
     return match ($l['action']) {
         'project_created'   => 'Projekat otvoren',
-        'project_updated'   => 'Izmenjen projekat' . (isset($d['deadline']) ? ' (rok)' : '') . (isset($d['install_week_start']) ? ' (nedelja)' : ''),
-        'project_released'  => 'Pušten u realizaciju',
+        'project_updated'   => 'Izmenjen projekat',
         'project_completed' => 'Projekat završen',
-        'project_archived'  => 'Arhiviran',
-        'project_restored'  => 'Vraćen iz arhive',
-        'system_added'      => 'Dodat sistem',
-        'system_removed'    => 'Uklonjen sistem',
-        'order_issued'      => 'Izdat nalog v' . ($d['version'] ?? 1),
-        'order_accepted'    => 'Preuzet nalog v' . ($d['version'] ?? 1),
-        'phase_started'     => 'Počela faza: ' . ($d['phase'] ?? ''),
-        'phase_completed'   => 'Završena faza: ' . ($d['phase'] ?? ''),
-        'phase_assigned'    => 'Faza dodeljena: ' . ($d['phase'] ?? ''),
-        'visit_created'     => 'Zakazan termin' . (!empty($d['date']) ? ' ' . fmt_dm($d['date']) : ''),
-        'visit_updated'     => !empty($d['reason']) ? 'Pomeren termin ' . fmt_dm($d['from'] ?? null) . ' → ' . fmt_dm($d['to'] ?? null) . ' (' . $d['reason'] . ')' : 'Izmenjen termin' . (!empty($d['confirmed']) ? ' · potvrđen' : ''),
-        'visit_cancelled'   => 'Otkazan termin (' . ($d['reason'] ?? '') . ')',
-        'visit_started'     => 'Počela montaža',
-        'visit_completed'   => 'Teren: ' . mb_strtolower(VISIT_RESULTS[$d['result'] ?? 'celo'] ?? ''),
-        'payment_received'  => 'Uplata ' . $money($d['amount'] ?? 0) . ' (' . mb_strtolower(METHOD_LABELS[$d['method'] ?? 'gotovina'] ?? '') . ')',
-        'payment_confirmed' => 'Naplata ' . $money($d['received'] ?? 0),
+        'install_set'       => !empty($d['to']) ? 'Montaža: ' . fmt_dm($d['to']) . (!empty($d['from']) ? ' (bilo ' . fmt_dm($d['from']) . ')' : '') : 'Uklonjen datum montaže',
+        'nalog_uploaded', 'order_issued' => 'Dodat nalog (PDF)',
+        'photos_added'      => 'Dodate slike' . (!empty($d['n']) ? ' (' . $d['n'] . ')' : ''),
+        'item_started', 'phase_started'     => 'Počelo: ' . $item(),
+        'item_completed', 'phase_completed' => 'Završeno: ' . $item() . (!empty($d['note']) ? ' — ' . $d['note'] : ''),
+        'item_reset'        => 'Vraćeno na „čeka": ' . $item(),
         'stoppage'          => 'Zastoj: ' . ($d['note'] ?? ''),
-        'stoppage_resolved' => 'Rešen zastoj',
-        'item_completed'    => 'Stavka završena (v1)',
-        'item_started'      => 'Stavka započeta (v1)',
-        'file_uploaded'     => 'Dodat fajl',
-        'task_created'      => 'Zadatak: ' . ($d['title'] ?? ''),
-        'task_completed'    => 'Završen zadatak',
-        default             => $l['action'],
+        'stoppage_resolved' => 'Rešen zastoj' . (!empty($d['note']) ? ': ' . $d['note'] : ''),
+        'visit_created', 'visit_updated' => 'Termin montaže' . (!empty($d['date']) ? ' ' . fmt_dm($d['date']) : ''),
+        'visit_completed'   => 'Montaža urađena',
+        'migration'         => 'Nadogradnja aplikacije',
+        default             => str_replace('_', ' ', (string) $l['action']),
     };
 }
