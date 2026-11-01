@@ -6,8 +6,8 @@ $nav = [
     ['danas',    'Danas',    'home',     []],
     ['projekti', 'Projekti', 'projekti', []],
     ['zadaci',   'Zadaci',   'zadaci',   []],
-    ['plan',     'Plan',     'plan',     ['vlasnik']],
-    ['izvestaj', 'Izveštaj', 'izvestaj', ['vlasnik']],
+    ['plan',     'Plan',     'plan',     []],
+    ['izvestaj', 'Izveštaj', 'izvestaj', []],
 ];
 $taskBadge = $u ? my_open_tasks((int) $u['id']) : 0;
 $nav = array_values(array_filter($nav, fn($n) => !$n[3] || ($u && in_array($u['role'], $n[3], true))));

@@ -187,6 +187,18 @@ act h.txt phase_start "$PH8b" >/dev/null
 ok "posle preuzimanja v2 rad se nastavlja" "$(sql "SELECT status FROM production_phases WHERE id=$PH8b")" "u_toku"
 ok "istorija beleži izdavanje i preuzimanje" "$(sql "SELECT COUNT(*) FROM activity_log WHERE project_id=$P8 AND action IN ('order_issued','order_accepted')")" "4"
 
+echo "9. Svi vide sve, prate i komentarišu"
+ok "Oliver vidi iznose" "$(curl -s -b h.txt "$B/?p=projekat&id=$P6" | grep -c '5.000 €' | awk '{print ($1>0)}')" "1"
+ok "Steva vidi plan i izveštaj" "$(curl -s -b t.txt -o /dev/null -w '%{http_code}' "$B/?p=plan")$(curl -s -b t.txt -o /dev/null -w '%{http_code}' "$B/?p=izvestaj")" "200200"
+ok "Oliver vidi završene projekte" "$(curl -s -b h.txt "$B/?p=projekti&f=zavrseno" | grep -c "S1 Jovanović $TAG" | awk '{print ($1>0)}')" "1"
+ok "Oliver vidi tuđi zadatak" "$(curl -s -b h.txt -o /dev/null -w '%{http_code}' "$B/?p=zadatak&id=$(sql "SELECT MAX(id) FROM tasks")")" "200"
+act t.txt project_comment "$P2" -d "body=Kupac traži LED traku $TAG" >/dev/null
+ok "Steva komentariše projekat" "$(sql "SELECT COUNT(*) FROM project_comments WHERE project_id=$P2 AND body LIKE '%LED traku $TAG%'")" "1"
+ok "Oliver vidi komentar na Danas" "$(curl -s -b h.txt "$B/?p=danas" | grep -c "LED traku $TAG" | awk '{print ($1>0)}')" "1"
+ok "Termine i dalje menja samo vlasnik" "$(curl -s -b t.txt -o /dev/null -w '%{http_code}' "$B/?p=termin&project=$P2")" "403"
+act h.txt payment_add "$P6" -d "amount=1&method=gotovina" >/dev/null
+ok "Hala ne upisuje uplate" "$(sql "SELECT COUNT(*) FROM payments WHERE project_id=$P6 AND amount=1")" "0"
+
 echo
 echo "Rezultat: $PASS prošlo, $FAIL palo"
 rm -rf "$W"

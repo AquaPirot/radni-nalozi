@@ -117,7 +117,7 @@ try {
         // ── Naplata ──
         case 'payment_add':
             $p = $project();
-            if (!can_see_payment($user)) {
+            if (!can_record_payment($user)) {
                 throw new RuleError('Nemaš pravo.');
             }
             $amount = parse_amount((string) ($_POST['amount'] ?? ''));
@@ -130,6 +130,12 @@ try {
         case 'cash_handover':
             $n = payments_handover(posted_ids('ids'), $user);
             flash('ok', "Potvrđeno: primljeno $n " . ($n === 1 ? 'uplata' : 'uplate') . '.');
+            break;
+
+        // ── Komentar na projektu (svi) ──
+        case 'project_comment':
+            project_comment_add($project(), $user, (string) ($_POST['body'] ?? ''), posted_ids('file_id')[0] ?? null);
+            flash('ok', 'Komentar je poslat — ostali dobijaju obaveštenje.');
             break;
 
         // ── Zadaci ──

@@ -15,14 +15,14 @@ function active_bundles(): array
     return $cache;
 }
 
-/** Stvari koje čekaju odluku vlasnika. */
+/** Stvari koje čekaju odluku vlasnika (svi ih vide — zajednička tabla). */
 function owner_decisions(array $user): array
 {
     $out = [];
     $soon = today()->modify('+' . (int) setting('plan_days_ahead', '7') . ' days')->format('Y-m-d');
     foreach (q_all("SELECT t.*, c.name AS created_name FROM tasks t LEFT JOIN users c ON c.id = t.created_by
-                    WHERE t.assigned_to = ? AND t.status <> 'zavrseno' AND t.archived_at IS NULL AND t.created_by <> t.assigned_to
-                    ORDER BY t.priority = 'hitno' DESC, t.due_date IS NULL, t.due_date", [$user['id']]) as $t) {
+                    WHERE t.assigned_to IN (" . (implode(',', array_map('intval', owner_ids())) ?: '0') . ") AND t.status <> 'zavrseno' AND t.archived_at IS NULL AND t.created_by <> t.assigned_to
+                    ORDER BY t.priority = 'hitno' DESC, t.due_date IS NULL, t.due_date") as $t) {
         $out[] = ['title' => $t['title'], 'why' => 'traži ' . ($t['created_name'] ?? '—') . ($t['due_date'] ? ' · rok ' . fmt_dm($t['due_date']) : ''), 'url' => url('zadatak', ['id' => $t['id']]), 'kind' => 'odluka', 'hot' => $t['priority'] === 'hitno'];
     }
     foreach (active_bundles() as $b) {
@@ -63,14 +63,22 @@ function owner_decisions(array $user): array
         $out[] = ['title' => 'Gotovina kod: ' . user_name($uid), 'why' => fmt_money((string) $sum) . ' · ' . $n . ($n === 1 ? ' uplata' : ' uplate') . ' — potvrdi kad primiš', 'url' => url('pregled', ['f' => 'naplata']), 'kind' => 'odluka', 'hot' => false];
     }
     usort($out, fn($a, $b) => (int) $b['hot'] <=> (int) $a['hot']);
+    if ($user['role'] !== 'vlasnik') {
+        // Termine raspoređuje vlasnik — ostali otvaraju projekat (tab Montaža) i tamo prate/komentarišu
+        foreach ($out as &$x) {
+            if (preg_match('/[?&]p=termin&project=(\d+)/', $x['url'], $m)) {
+                $x['url'] = url('projekat', ['id' => $m[1], 't' => 'montaza']);
+            }
+        }
+        unset($x);
+    }
     return $out;
 }
 
-/** Otvoreni zastoji (projekti i zadaci) — vlasnik sve, ostali svoje. */
-function open_stops_list(array $user): array
+/** Otvoreni zastoji (projekti i zadaci). Svi vide sve; $mine = samo gde je korisnik odgovoran ili prijavio. */
+function open_stops_list(array $user, bool $mine = false): array
 {
     $out = [];
-    $mine = $user['role'] !== 'vlasnik';
     foreach (active_bundles() as $b) {
         if ($b['p']['status'] !== 'aktivan') {
             continue;
@@ -97,7 +105,7 @@ function late_list(array $user): array
     $out = [];
     foreach (active_bundles() as $b) {
         $p = $b['p'];
-        if (!($late = project_late($p)) || ($user['role'] !== 'vlasnik' && $p['status'] !== 'aktivan')) {
+        if (!($late = project_late($p)) || $p['status'] !== 'aktivan') {
             continue;
         }
         [$na, $who] = next_action($b);

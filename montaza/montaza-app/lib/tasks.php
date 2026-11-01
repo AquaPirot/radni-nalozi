@@ -13,10 +13,7 @@ const TASK_STATUS_LABELS = [
 
 function task_visibility_sql(array $user): array
 {
-    if ($user['role'] === 'vlasnik') {
-        return ['1=1', []];
-    }
-    return ['(t.assigned_to = ? OR t.created_by = ?)', [$user['id'], $user['id']]];
+    return ['1=1', []]; // svi vide sve zadatke
 }
 
 function load_task(int $id): ?array
@@ -36,9 +33,7 @@ function load_task(int $id): ?array
 
 function can_view_task(array $user, array $task): bool
 {
-    return $user['role'] === 'vlasnik'
-        || (int) $task['assigned_to'] === (int) $user['id']
-        || (int) $task['created_by'] === (int) $user['id'];
+    return true; // svi vide i komentarišu sve zadatke
 }
 
 /** Završava / prijavljuje zastoj: onaj kome je dodeljen, ili vlasnik. */

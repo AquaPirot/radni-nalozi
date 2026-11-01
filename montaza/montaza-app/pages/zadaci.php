@@ -4,10 +4,8 @@ declare(strict_types=1);
 // Lista zadataka (?p=zadaci&f=…)
 
 $isOwner = $user['role'] === 'vlasnik';
-$filters = $isOwner
-    ? ['otvoreni' => 'Otvoreni', 'moji' => 'Moji', 'zadao' => 'Zadao sam', 'bez_roka' => 'Bez roka', 'zavrseno' => 'Završeno']
-    : ['moji' => 'Moji', 'zadao' => 'Zadao sam', 'bez_roka' => 'Bez roka', 'zavrseno' => 'Završeno'];
-$f = isset($filters[$_GET['f'] ?? '']) ? $_GET['f'] : array_key_first($filters);
+$filters = ['otvoreni' => 'Svi otvoreni', 'moji' => 'Moji', 'zadao' => 'Zadao sam', 'bez_roka' => 'Bez roka', 'zavrseno' => 'Završeno'];
+$f = isset($filters[$_GET['f'] ?? '']) ? $_GET['f'] : ($isOwner ? 'otvoreni' : 'moji');
 
 [$vis, $vp] = task_visibility_sql($user);
 $vis .= ' AND t.archived_at IS NULL';

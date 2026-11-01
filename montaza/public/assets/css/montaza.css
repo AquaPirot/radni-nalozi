@@ -997,3 +997,9 @@ input:disabled { opacity: .45; }
 /* ── Naplata u formi: iznos i ko naplaćuje jedno ispod drugog ── */
 .grid2.pay-amount { grid-template-columns: 1fr; }
 .grid2.pay-amount .amount input { width: 100%; }
+
+/* ── Komentari na projektu ── */
+.cmt-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.hist li.cmt.mine { border-left-color: var(--line-strong); }
+.react.cmt .grow > span.small { font-size: 13px; color: var(--muted); }
+.sec-title { font-size: 22px; font-weight: 700; margin-top: 12px; padding-top: 16px; border-top: 1px solid var(--border); }

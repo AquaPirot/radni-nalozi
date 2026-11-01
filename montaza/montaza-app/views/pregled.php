@@ -19,6 +19,9 @@
         <h2 class="sec-head"><span>GOTOVINA KOD RADNIKA (NIJE PREDATA)</span></h2>
         <?php if (!$cash): ?><p class="small muted">Sva gotovina je predata firmi.</p><?php endif; ?>
         <?php foreach ($cash as $uid => $rows): $sum = array_sum(array_map(fn($r) => (float) $r['amount'], $rows)); ?>
+            <?php if ($user['role'] !== 'vlasnik'): ?>
+                <div class="card row-between"><strong><?= e(user_name($uid)) ?></strong><strong class="mono"><?= e(fmt_money((string) $sum)) ?></strong></div>
+                <?php continue; endif; ?>
             <form class="card stack" method="post" action="<?= e(url() . 'api/akcija.php') ?>">
                 <?= csrf_field() ?><?= once_field() ?>
                 <input type="hidden" name="action" value="cash_handover"><input type="hidden" name="id" value="0"><input type="hidden" name="back" value="<?= e(here()) ?>">

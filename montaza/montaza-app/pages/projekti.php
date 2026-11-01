@@ -4,9 +4,7 @@ declare(strict_types=1);
 // Lista projekata (?p=projekti&f=…&q=…), grupisano po nedelji sledećeg termina.
 
 $isOwner = $user['role'] === 'vlasnik';
-$filters = $isOwner
-    ? ['aktivni' => 'Aktivni', 'nacrti' => 'Nacrti', 'reklamacije' => 'Servis i rekl.', 'zavrseno' => 'Završeno', 'arhiva' => 'Arhiva']
-    : ['aktivni' => 'Aktivni', 'reklamacije' => 'Servis i rekl.'];
+$filters = ['aktivni' => 'Aktivni', 'nacrti' => 'Nacrti', 'reklamacije' => 'Servis i rekl.', 'zavrseno' => 'Završeno', 'arhiva' => 'Arhiva'];
 $f = isset($filters[$_GET['f'] ?? '']) ? $_GET['f'] : 'aktivni';
 $search = trim((string) ($_GET['q'] ?? ''));
 

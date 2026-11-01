@@ -24,18 +24,17 @@ $data['given'] = q_all(
     [$uid, $uid]
 );
 
-if ($role === 'vlasnik') {
-    $data['decisions'] = owner_decisions($user);
-    $data['stops'] = open_stops_list($user);
-    $data['late'] = late_list($user);
-    [$data['payList'], $data['paySum']] = due_payments();
-    $data['today'] = visits_between($todayS, $todayS);
-    $data['next'] = array_values(array_filter(visits_between(today()->modify('+1 day')->format('Y-m-d'), $ahead), fn($v) => $v['start_date'] > $todayS));
-} elseif ($role === 'teren') {
-    $data['today'] = visits_between($todayS, $todayS);
-    $data['next'] = array_values(array_filter(visits_between(today()->modify('+1 day')->format('Y-m-d'), $ahead), fn($v) => $v['start_date'] > $todayS));
-    $data['stops'] = open_stops_list($user);
-} else { // hala
+// Zajednička komandna tabla — svi vide isto
+$data['decisions'] = owner_decisions($user);
+$data['stops'] = open_stops_list($user);
+$data['late'] = late_list($user);
+[$data['payList'], $data['paySum']] = due_payments();
+$data['today'] = visits_between($todayS, $todayS);
+$data['next'] = array_values(array_filter(visits_between(today()->modify('+1 day')->format('Y-m-d'), $ahead), fn($v) => $v['start_date'] > $todayS));
+$data['myStops'] = array_values(array_filter(open_stops_list($user, true)));
+$data['comments'] = recent_comments((int) $user['id'], 3, 6);
+
+if ($role === 'hala') {
     $data['orders'] = q_all(
         "SELECT o.*, p.customer_name, p.city FROM project_orders o JOIN projects p ON p.id = o.project_id
          WHERE o.accepted_at IS NULL AND p.status = 'aktivan' AND p.archived_at IS NULL
@@ -55,7 +54,6 @@ if ($role === 'vlasnik') {
          ORDER BY ph.status = 'zastoj' DESC, ph.status = 'u_toku' DESC, next_date IS NULL, next_date, ph.due_date IS NULL, ph.due_date"
     );
     $data['phases'] = $rows;
-    $data['stops'] = open_stops_list($user);
 }
 
 $hour = (int) date('G');

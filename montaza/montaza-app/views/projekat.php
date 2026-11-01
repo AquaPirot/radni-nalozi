@@ -78,11 +78,13 @@ $vStatus = ['planiran' => ['ceka', 'Planirano'], 'u_toku' => ['u_toku', 'U radu'
     <?php if ($p['status'] === 'nacrt'): ?>
         <div class="card stack">
             <strong>Ovo je nacrt</strong>
-            <span class="muted">Hala i teren ga ne vide dok ga ne pustiš u realizaciju.</span>
+            <span class="muted">Još nije pušten u realizaciju — hala i teren ne rade po njemu dok ga Aleksandar ne pusti.</span>
+            <?php if ($isOwner): ?>
             <div class="btn-row">
                 <a class="btn ghost grow" href="<?= e(url('izmeni', ['id' => $pid])) ?>">Dopuni</a>
                 <?= action_button('release', $pid, 'Pusti u realizaciju', 'btn primary grow') ?>
             </div>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 
@@ -162,6 +164,28 @@ $vStatus = ['planiran' => ['ceka', 'Planirano'], 'u_toku' => ['u_toku', 'U radu'
                 <?php endforeach; ?>
             </div>
         <?php else: ?><p class="small muted">Nema zadataka.</p><?php endif; ?>
+    </section>
+
+    <section class="stack" id="komentari">
+        <h2 class="sec-head"><span>KOMENTARI</span><span><?= count($comments) ?></span></h2>
+        <?php if ($comments): ?>
+            <ol class="hist">
+                <?php foreach ($comments as $c): ?>
+                    <li class="cmt<?= (int) $c['user_id'] === (int) $user['id'] ? ' mine' : '' ?>">
+                        <div class="cmt-head"><strong><?= e($c['user_name'] ?? '—') ?></strong><span class="mono muted small"><?= e(fmt_ago($c['created_at'])) ?></span></div>
+                        <?php if ($c['body']): ?><div><?= nl2br(e($c['body'])) ?></div><?php endif; ?>
+                        <?php if ($c['file_id']): ?><a class="cmt-img" href="<?= e(file_url((int) $c['file_id'])) ?>" target="_blank" rel="noopener"><img src="<?= e(file_url((int) $c['file_id'], true)) ?>" alt="" loading="lazy"></a><?php endif; ?>
+                    </li>
+                <?php endforeach; ?>
+            </ol>
+        <?php else: ?><p class="small muted">Još nema komentara. Pitanje, dogovor sa kupcem, stanje na terenu — napiši ovde, svi vide.</p><?php endif; ?>
+        <form class="stack card" method="post" action="<?= e(url() . 'api/akcija.php') ?>" data-autosave="pcmt-<?= $pid ?>">
+            <?= csrf_field() ?><?= once_field() ?>
+            <input type="hidden" name="action" value="project_comment"><input type="hidden" name="id" value="<?= $pid ?>"><input type="hidden" name="back" value="<?= e(here()) ?>#komentari">
+            <label class="field"><span>Novi komentar</span><textarea class="input" name="body" rows="2" placeholder="Svi na projektu dobijaju obaveštenje"></textarea></label>
+            <?= uploader('file_id', 'Slika uz komentar', false, 'foto', false, 'opciono', []) ?>
+            <button class="btn primary block" type="submit"><?= icon('check', 18) ?>Pošalji komentar</button>
+        </form>
     </section>
 
     <?php if ($p['status'] === 'aktivan'): ?>

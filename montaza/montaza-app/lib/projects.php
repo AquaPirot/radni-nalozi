@@ -78,12 +78,10 @@ function owner_ids(): array
 // ── Prava pristupa ──────────────────────────────────────────
 
 /** Hala i teren vide aktivne projekte (ne nacrte ni arhivu); vlasnik sve. */
+/** Svi vide sve projekte (dogovor: svi pratimo i komentarišemo). Menjanje i dalje zavisi od uloge. */
 function visibility_sql(array $user): array
 {
-    if ($user['role'] === 'vlasnik') {
-        return ['1=1', []];
-    }
-    return ["p.status = 'aktivan' AND p.archived_at IS NULL", []];
+    return ['1=1', []];
 }
 
 function can_view_project(array $user, int $projectId): bool
@@ -92,8 +90,14 @@ function can_view_project(array $user, int $projectId): bool
     return (bool) q_val("SELECT 1 FROM projects p WHERE p.id = ? AND $where", array_merge([$projectId], $params));
 }
 
-/** Iznose vide vlasnik i teren (koji naplaćuje); hala nikad. */
+/** Iznose vide svi. */
 function can_see_payment(array $user): bool
+{
+    return true;
+}
+
+/** Uplatu upisuje vlasnik ili teren (koji naplaćuje). */
+function can_record_payment(array $user): bool
 {
     return in_array($user['role'], ['vlasnik', 'teren'], true);
 }

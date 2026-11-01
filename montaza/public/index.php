@@ -21,9 +21,9 @@ $routes = [
     'novi_zadatak'   => ['zadatak_forma',   []],
     'izmeni_zadatak' => ['zadatak_forma',   []],
     'zadatak_zavrsi' => ['zadatak_zavrsi',  []],
-    'plan'        => ['plan',           ['vlasnik']],
-    'pregled'     => ['pregled',        ['vlasnik']],
-    'izvestaj'    => ['izvestaj',       ['vlasnik']],
+    'plan'        => ['plan',           []],
+    'pregled'     => ['pregled',        []],
+    'izvestaj'    => ['izvestaj',       []],
     'podesavanja' => ['podesavanja',    ['vlasnik']],
 ];
 

@@ -63,3 +63,21 @@ Nadogradnja je proverena i na kopiji v1 podataka (13 projekata):
 - dobijeno je 13 sistema, 37 faza, 15 termina, 3 naloga i 2 uplate;
 - tri istovremena zahteva pokreću migraciju samo jednom;
 - otvoreno je 192 strane za sve tri uloge, bez greške.
+
+## Ko šta vidi i menja (v2.1)
+
+Dogovor: **svi vide sve, prate i komentarišu.**
+
+| | Aleksandar | Oliver (hala) | Steva (teren) |
+|---|---|---|---|
+| Svi projekti (i nacrti, završeni, arhiva), iznosi i naplata | vidi | vidi | vidi |
+| Danas — zajednička komandna tabla, Plan, Izveštaj, svi zadaci | vidi | vidi | vidi |
+| Komentari na projektu i zadatku (sa slikom) | piše | piše | piše |
+| Novi projekat, puštanje u realizaciju, izdavanje naloga | menja | — | — |
+| Termini (raspored, pomeranje, potvrda) | menja | — | — |
+| Faze proizvodnje, preuzimanje naloga | menja | menja | — |
+| Montaža (počinjem, završavam, upis uplate) | menja | — | menja |
+| Potvrda da je gotovina predata firmi | menja | — | — |
+| Podešavanja (korisnici, ekipe, sistemi, faze) | menja | — | — |
+
+Komentar na projektu šalje obaveštenje svima ostalima. Na Danas je deo „Novi komentari", sa komentarima iz poslednja 3 dana.

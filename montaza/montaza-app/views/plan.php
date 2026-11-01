@@ -66,6 +66,7 @@ $visitCard = function (array $v) use ($bundles, $visitBadge): string {
 </div>
 <p class="small muted"><?= $weekCount ?> <?= $weekCount === 1 ? 'termin' : 'termina' ?> ove nedelje · okvirni kapacitet <?= $capacity ?> montaža nedeljno</p>
 
+<?php $planOwner = (current_user()['role'] ?? '') === 'vlasnik'; ?>
 <?php if ($unVisits || $unBundles): ?>
     <a class="rcard static unsched-link" href="<?= e(url('plan', ['w' => $mon->format('Y-m-d'), 'f' => $showUn ? null : 'neraspored'])) ?>#nerasporedjeno">
         <span><strong><?= icon('zadaci', 18) ?> Neraspoređeno · <?= count($unVisits) + count($unBundles) ?></strong><span class="muted small">projekti i ponovni dolasci bez termina</span></span><?= icon('chevron') ?></a>
@@ -73,13 +74,13 @@ $visitCard = function (array $v) use ($bundles, $visitBadge): string {
 <?php if ($showUn): ?>
     <section class="stack" id="nerasporedjeno">
         <?php foreach ($unVisits as $v): ?>
-            <a class="list-row card" href="<?= e(url('termin', ['project' => $v['project_id'], 'id' => $v['id'], 'back' => 'plan'])) ?>">
-                <span><strong><?= e($v['customer_name']) ?></strong> <span class="muted"><?= e($v['city']) ?></span><br><span class="small warn"><?= e(VISIT_KINDS[$v['kind']]) ?><?= $v['note'] ? ' · ' . e(trim($v['note'])) : '' ?></span></span><span class="chip">Rasporedi</span></a>
+            <a class="list-row card" href="<?= e($planOwner ? url('termin', ['project' => $v['project_id'], 'id' => $v['id'], 'back' => 'plan']) : url('projekat', ['id' => $v['project_id'], 't' => 'montaza'])) ?>">
+                <span><strong><?= e($v['customer_name']) ?></strong> <span class="muted"><?= e($v['city']) ?></span><br><span class="small warn"><?= e(VISIT_KINDS[$v['kind']]) ?><?= $v['note'] ? ' · ' . e(trim($v['note'])) : '' ?></span></span><span class="chip"><?= $planOwner ? 'Rasporedi' : 'Otvori' ?></span></a>
         <?php endforeach; ?>
         <?php foreach ($unBundles as $b): [$st, $stl] = project_stage($b); ?>
-            <a class="list-row card" href="<?= e(url('termin', ['project' => $b['p']['id'], 'back' => 'plan'])) ?>">
+            <a class="list-row card" href="<?= e($planOwner ? url('termin', ['project' => $b['p']['id'], 'back' => 'plan']) : url('projekat', ['id' => $b['p']['id']])) ?>">
                 <span><strong><?= e($b['p']['customer_name']) ?></strong> <span class="muted"><?= e($b['p']['city']) ?></span><br>
-                    <span class="small muted"><?= e($stl) ?><?= $b['systems'] ? ' · ' . e(systems_summary($b['systems'], 2)) : '' ?><?= $b['p']['deadline'] ? ' · rok ' . e(fmt_dm($b['p']['deadline'])) : '' ?></span></span><span class="chip">Rasporedi</span></a>
+                    <span class="small muted"><?= e($stl) ?><?= $b['systems'] ? ' · ' . e(systems_summary($b['systems'], 2)) : '' ?><?= $b['p']['deadline'] ? ' · rok ' . e(fmt_dm($b['p']['deadline'])) : '' ?></span></span><span class="chip"><?= $planOwner ? 'Rasporedi' : 'Otvori' ?></span></a>
         <?php endforeach; ?>
     </section>
 <?php endif; ?>
@@ -95,7 +96,7 @@ $visitCard = function (array $v) use ($bundles, $visitBadge): string {
             <?php if ($d['items']): ?>
                 <?php foreach ($d['items'] as $v) { echo $visitCard($v); } ?>
             <?php else: ?>
-                <a class="small muted add-day" href="<?= e(url('plan', ['w' => $mon->format('Y-m-d'), 'f' => 'neraspored'])) ?>#nerasporedjeno">Slobodno — rasporedi</a>
+                <a class="small muted add-day" href="<?= e(url('plan', ['w' => $mon->format('Y-m-d'), 'f' => 'neraspored'])) ?>#nerasporedjeno"><?= $planOwner ? 'Slobodno — rasporedi' : 'Slobodno' ?></a>
             <?php endif; ?>
         </section>
     <?php endforeach; ?>
@@ -116,4 +117,4 @@ $visitCard = function (array $v) use ($bundles, $visitBadge): string {
     <?php endforeach; ?>
 </div>
 
-<a class="fab" href="<?= e(url('plan', ['w' => $mon->format('Y-m-d'), 'f' => 'neraspored'])) ?>#nerasporedjeno"><?= icon('plus') ?><span>Rasporedi montažu</span></a>
+<?php if ($planOwner): ?><a class="fab" href="<?= e(url('plan', ['w' => $mon->format('Y-m-d'), 'f' => 'neraspored'])) ?>#nerasporedjeno"><?= icon('plus') ?><span>Rasporedi montažu</span></a><?php endif; ?>

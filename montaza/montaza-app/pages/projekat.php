@@ -31,6 +31,7 @@ $log = $t === 'dokumenti' ? q_all(
     [$id]
 ) : [];
 $parent = $p['parent_project_id'] ? load_project((int) $p['parent_project_id']) : null;
+$comments = project_comments($id);
 $children = q_all('SELECT id, code, customer_name, status FROM projects WHERE parent_project_id = ? ORDER BY created_at', [$id]);
 $allStops = q_all('SELECT * FROM stoppages WHERE project_id = ? AND task_id IS NULL ORDER BY created_at DESC', [$id]);
 $teams = teams_active();
@@ -49,6 +50,7 @@ view('projekat', [
     'tasks'    => $tasks,
     'log'      => $log,
     'parent'   => $parent,
+    'comments' => $comments,
     'children' => $children,
     'allStops' => $allStops,
     'teams'    => $teams,
