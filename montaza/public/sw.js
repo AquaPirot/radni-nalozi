@@ -1,6 +1,6 @@
 // MONTAŽA — service worker: samo ikonica + keš statike (offline rad nije cilj v1).
 // Stranice uvek idu na mrežu (podaci moraju biti sveži); bez mreže → offline.html.
-const CACHE = 'montaza-v3';
+const CACHE = 'montaza-v4';
 const STATIC = [
   '/offline.html',
   '/assets/css/app.css',
