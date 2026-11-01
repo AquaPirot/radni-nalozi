@@ -54,6 +54,14 @@ if ($stops) {
 
 $sent = 0;
 foreach (q_all("SELECT * FROM users WHERE active = 1") as $u) {
+    $tasksN = (int) q_val("SELECT COUNT(*) FROM tasks WHERE assigned_to = ? AND status <> 'zavrseno'", [$u['id']]);
+    $short = 'Montaže: ' . count($week) . ' · Kasni: ' . count($late) . ' · Zastoji: ' . count($stops) . ($tasksN ? ' · Tvoji zadaci: ' . $tasksN : '');
+    if ($dry) {
+        echo "--- push za {$u['name']}: $short\n";
+    } elseif (push_to_user((int) $u['id'], 'Pregled nedelje — ' . week_label($mon), $short, url())) {
+        $sent++;
+    }
+
     $chat = (string) $u['telegram_chat_id'];
     if ($chat === '' && $u['role'] === 'vlasnik') {
         $chat = (string) setting('telegram_owner_chat_id', '');

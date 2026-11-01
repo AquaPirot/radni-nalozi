@@ -36,22 +36,29 @@ Otvori **https://montaza.aggroup.rs**. Sam te prebaci na instalaciju:
 
 Uradi korak 4 odmah posle raspakivanja: dok instalacija nije završena, `install.php` može da otvori bilo ko.
 
-## 5. Telefoni
+## 5. Telefoni i obaveštenja
 
 Svako na svom telefonu:
 1. Otvori **https://montaza.aggroup.rs** i prijavi se. „Zapamti me" drži prijavu 30 dana.
-2. Dodaj aplikaciju na početni ekran:
+2. **Dodaj na početni ekran:**
    - **Android (Chrome):** meni ⋮ → **Dodaj na početni ekran** / **Instaliraj aplikaciju**;
    - **iPhone (Safari):** dugme Deli (□↑) → **Add to Home Screen**.
+3. **Otvori Montažu sa ikonice** → u kartici „Obaveštenja na ovom telefonu" dodirni **Uključi** (ili zvonce gore) → **Dozvoli**.
+   Odmah stiže probno obaveštenje „Obaveštenja su uključena ✓", a zvonce postane zeleno.
+
+Obaveštenja stižu kao kod svake aplikacije, i kad je Montaža zatvorena. Dodir na obaveštenje otvara taj projekat ili zadatak.
+- **iPhone:** potreban je iOS 16.4 ili noviji, a Montaža mora biti otvorena sa ikonice na početnom ekranu, ne iz Safarija.
+- **Android:** radi u Chrome-u. Ako je slučajno kliknuto „Blokiraj": katanac pored adrese → Obaveštenja → Dozvoli.
+- U **Podešavanja → Korisnici** vidiš ko ima uključena obaveštenja i na koliko telefona.
 
 Zaštita kratkih lozinki:
 - posle 5 pogrešnih pokušaja nalog je zaključan 15 minuta;
 - posle 20 pogrešnih pokušaja u toku dana zaključan je 24 sata, a Aleksandar dobija poruku;
 - Aleksandar može ranije da otključa nalog: **Podešavanja → korisnik → Otključaj nalog**.
 
-## 6. Telegram obaveštenja
+## 6. Telegram (opciono)
 
-Na telefonu treba samo aplikacija **Telegram**. Ništa drugo se ne instalira.
+Obaveštenja iz koraka 5 su dovoljna. Telegram je dodatni kanal, ako ga želite: na telefonu treba samo aplikacija **Telegram**.
 
 1. Aleksandar: u Telegramu otvori **@BotFather** → `/newbot` → ime npr. „AG Montaža" → dobiješ **token** (`123456789:ABC…`).
    Napravi **novi** bot samo za Montažu. Bot za upite koji već koristiš verovatno ne može da se deli.
@@ -59,7 +66,7 @@ Na telefonu treba samo aplikacija **Telegram**. Ništa drugo se ne instalira.
 3. Aleksandar, Oliver i Steva u Telegramu pronađu bota (po imenu iz koraka 1) i pritisnu **Start**, odnosno pošalju bilo koju poruku.
 4. **Podešavanja → Pronađi chat ID** → pojave se imena i brojevi. Upiši broj svakom korisniku (otvori korisnika → *Telegram chat ID* → Sačuvaj) → **Pošalji test poruku**.
 
-Ko šta dobija:
+Ko šta dobija, isto i na telefon i na Telegram:
 - **Oliver i Steva:** novi projekat i raspoređivanje („montaža pon 10.11. – pet 14.11.").
 - **Steva:** „Spremno za montažu" kad Oliver zatvori pakovanje.
 - **Aleksandar:**
@@ -79,7 +86,7 @@ Ko šta dobija:
 /usr/local/bin/php /home/KORISNIK/montaza.aggroup.rs/montaza-app/cron/nedeljni-pregled.php
 ```
 
-Svako ponedeljkom u 7:00 dobije poruku sa ovim:
+Svako ponedeljkom u 7:00 dobije obaveštenje na telefonu i, ako ima Telegram, detaljnu poruku sa ovim:
 - montaže te nedelje;
 - šta kasni;
 - otvoreni zastoji;
@@ -96,6 +103,7 @@ Svako ponedeljkom u 7:00 dobije poruku sa ovim:
 | Instalacija: „server ne dozvoljava upis fajla" | Uradi ono što piše na ekranu: napravi `montaza-app/config.php` sa prikazanim tekstom. |
 | „Došlo je do greške" | Pogledaj `montaza-app/logs/app.log` u File Manager-u. |
 | Slika ili PDF „prevelik" | cPanel → **MultiPHP INI Editor**: `upload_max_filesize` ≥ 20M, `post_max_size` ≥ 64M. |
+| Obaveštenja ne stižu | Proveri da je zvonce zeleno. Na iPhone-u otvori Montažu sa ikonice, ne iz Safarija. U podešavanjima telefona obaveštenja za Montažu/Chrome moraju biti uključena. |
 | Kamera se ne otvara | Sajt mora biti na **https://** (korak 1, AutoSSL). |
 | Zaboravljena lozinka | Aleksandar: **Podešavanja → korisnik → Nova lozinka**. |
 | Aleksandar zaboravio svoju lozinku | cPanel **Terminal**: `php -r 'echo password_hash("NOVA", PASSWORD_DEFAULT);'` → phpMyAdmin → tabela `users` → red `aleksandar` → nalepi u `password_hash`. |

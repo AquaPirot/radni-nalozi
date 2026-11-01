@@ -30,6 +30,7 @@ if ($focus) {
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="robots" content="noindex">
     <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
+    <?php if (push_supported()): ?><meta name="vapid-key" content="<?= e(push_vapid()[0]) ?>"><?php endif; ?>
     <title><?= e($title ?? 'Montaža') ?> — AG GROUP</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,6 +46,7 @@ if ($focus) {
         <div class="top-actions">
             <?= $topExtra ?? '' ?>
             <?php if (!$focus): ?>
+            <button class="icon-btn push-btn" type="button" data-push-toggle hidden aria-label="Obaveštenja na ovom telefonu"><?= icon('bell') ?></button>
             <?php if ($u && $u['role'] === 'vlasnik'): ?>
                 <a class="icon-btn<?= $tab === 'podesavanja' ? ' on' : '' ?>" href="<?= e(url('podesavanja')) ?>" aria-label="Podešavanja"><?= icon('podesavanja') ?></a>
             <?php endif; ?>
@@ -55,6 +57,16 @@ if ($focus) {
             <?php endif; ?>
         </div>
     </header>
+    <?php endif; ?>
+
+    <?php if (!$focus && empty($hideTop)): ?>
+    <div class="push-banner" data-push-banner hidden>
+        <div><strong>Obaveštenja na ovom telefonu</strong><span class="small muted" data-push-banner-text>Zastoji, nove montaže, zadaci — odmah na ekranu telefona.</span></div>
+        <div class="btn-row">
+            <button class="btn primary sm" type="button" data-push-enable><?= icon('bell', 18) ?>Uključi</button>
+            <button class="btn ghost sm" type="button" data-push-dismiss>Ne sada</button>
+        </div>
+    </div>
     <?php endif; ?>
 
     <?php foreach (flashes() as $fl): ?>

@@ -10,7 +10,7 @@ $tgOn = $token !== '';
         <details class="rcard user-card<?= $u['active'] ? '' : ' off' ?>">
             <summary>
                 <span><strong><?= e($u['name']) ?><?= $self ? ' (ti)' : '' ?></strong>
-                    <span class="mono small muted"><?= e($u['username']) ?> · <?= e(mb_strtoupper(ROLE_LABELS[$u['role']])) ?><?= $u['telegram_chat_id'] ? ' · TELEGRAM' : '' ?><?= $u['active'] ? '' : ' · NEAKTIVAN' ?></span>
+                    <span class="mono small muted"><?= e($u['username']) ?> · <?= e(mb_strtoupper(ROLE_LABELS[$u['role']])) ?><?= (int) $u['phones'] ? ' · OBAVEŠTENJA (' . (int) $u['phones'] . ')' : '' ?><?= $u['telegram_chat_id'] ? ' · TELEGRAM' : '' ?><?= $u['active'] ? '' : ' · NEAKTIVAN' ?></span>
                     <?php if ((int) $u['fails'] >= 5): ?><span class="small warn"><?= (int) $u['fails'] ?> pogrešnih lozinki u 24h</span><?php endif; ?>
                 </span><?= icon('chevron') ?>
             </summary>
@@ -70,8 +70,8 @@ $tgOn = $token !== '';
         <label class="field"><span>Slike montaža</span><input class="input mono" name="min_photos_montaza" type="number" min="1" max="20" value="<?= e(setting('min_photos_montaza', '3')) ?>"></label>
     </div>
 
-    <h2 class="h2">Telegram</h2>
-    <p class="small muted">Napravi bota kod <span class="mono">@BotFather</span> (preporuka: novi bot samo za Montažu), nalepi token ovde, pa neka svako pošalje botu poruku „start". Onda klikni „Pronađi chat ID" i upiši brojeve korisnicima iznad.</p>
+    <h2 class="h2">Telegram <span class="muted small">(opciono)</span></h2>
+    <p class="small muted">Obaveštenja na telefon rade i bez Telegrama: svako u aplikaciji dodirne zvonce. Telegram je dodatni kanal. Napravi bota kod <span class="mono">@BotFather</span> (preporuka: novi bot samo za Montažu), nalepi token ovde, pa neka svako pošalje botu poruku „start". Onda klikni „Pronađi chat ID" i upiši brojeve korisnicima iznad.</p>
     <label class="field"><span>Token bota <?= $tgOn ? '<span class="mono muted">(sačuvan: …' . e(substr($token, -4)) . ')</span>' : '' ?></span>
         <input class="input mono" name="telegram_bot_token" autocomplete="off" placeholder="<?= $tgOn ? 'prazno = bez promene' : '123456789:ABC…' ?>"></label>
     <?php if ($tgOn): ?><label class="check"><input type="checkbox" name="telegram_clear" value="1"><span class="box"></span><span>Isključi Telegram (obriši token)</span></label><?php endif; ?>

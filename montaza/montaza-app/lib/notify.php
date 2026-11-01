@@ -62,61 +62,58 @@ function telegram_api(string $token, string $method, array $params = []): array
     }
 }
 
-/** Chat ID-jevi aktivnih korisnika sa datim ulogama (+ vlasnikov chat iz podešavanja). */
-function chat_ids_for_roles(array $roles, ?int $exceptUserId = null): array
-{
-    if (!$roles) {
-        return [];
-    }
-    $in = implode(',', array_fill(0, count($roles), '?'));
-    $ids = [];
-    foreach (q_all("SELECT id, telegram_chat_id FROM users WHERE active = 1 AND role IN ($in) AND telegram_chat_id IS NOT NULL AND telegram_chat_id <> ''", $roles) as $u) {
-        if ((int) $u['id'] !== $exceptUserId) {
-            $ids[] = $u['telegram_chat_id'];
-        }
-    }
-    $owner = (string) setting('telegram_owner_chat_id', '');
-    if (in_array('vlasnik', $roles, true) && $owner !== '') {
-        $ids[] = $owner;
-    }
-    return array_values(array_unique($ids));
-}
-
 /**
- * Poruka svim korisnicima sa datim ulogama (onaj ko je izazvao događaj ne dobija poruku).
+ * Poruka svim aktivnim korisnicima sa datim ulogama — na telefon (push) i na Telegram.
+ * Onaj ko je izazvao događaj ne dobija sopstvenu poruku.
  * @param list<string> $roles
  */
 function notify(array $roles, string $text, ?int $projectId = null): void
 {
     try {
+        if (!$roles) {
+            return;
+        }
         $me = current_user();
-        if ($projectId) {
-            $text .= "\n" . url('projekat', ['id' => $projectId]);
+        $myId = $me ? (int) $me['id'] : 0;
+        $link = $projectId ? url('projekat', ['id' => $projectId]) : null;
+        $in = implode(',', array_fill(0, count($roles), '?'));
+        $chats = [];
+        foreach (q_all("SELECT id, telegram_chat_id FROM users WHERE active = 1 AND role IN ($in)", $roles) as $u) {
+            if ((int) $u['id'] === $myId) {
+                continue;
+            }
+            push_to_user((int) $u['id'], 'AG Montaža', $text, $link);
+            if ($u['telegram_chat_id']) {
+                $chats[] = (string) $u['telegram_chat_id'];
+            }
         }
-        // Onaj ko je izazvao događaj ne dobija sopstvenu poruku
-        $skip = [];
+        // Zajednički chat vlasnika/grupe iz podešavanja
+        $owner = (string) setting('telegram_owner_chat_id', '');
+        if ($owner !== '' && in_array('vlasnik', $roles, true) && !($me && $me['role'] === 'vlasnik')) {
+            $chats[] = $owner;
+        }
         if ($me) {
-            $skip[] = (string) $me['telegram_chat_id'];
-            if ($me['role'] === 'vlasnik') {
-                $skip[] = (string) setting('telegram_owner_chat_id', '');
-            }
+            $chats = array_diff($chats, [(string) $me['telegram_chat_id']]);
         }
-        foreach (chat_ids_for_roles($roles) as $chat) {
-            if (!in_array($chat, $skip, true)) {
-                telegram_send($chat, $text);
-            }
+        foreach (array_unique($chats) as $chat) {
+            telegram_send($chat, $text . ($link ? "\n$link" : ''));
         }
     } catch (Throwable $ex) {
         error_log('notify: ' . $ex->getMessage());
     }
 }
 
-/** Poruka jednom korisniku. */
+/** Poruka jednom korisniku — na telefon (push) i na Telegram. */
 function notify_user(int $userId, string $text, ?string $link = null): void
 {
     try {
-        $chat = (string) q_val('SELECT telegram_chat_id FROM users WHERE id = ? AND active = 1', [$userId]);
-        if ($chat === '' && q_val("SELECT role FROM users WHERE id = ?", [$userId]) === 'vlasnik') {
+        push_to_user($userId, 'AG Montaža', $text, $link);
+        $u = q_one('SELECT role, telegram_chat_id FROM users WHERE id = ? AND active = 1', [$userId]);
+        if (!$u) {
+            return;
+        }
+        $chat = (string) $u['telegram_chat_id'];
+        if ($chat === '' && $u['role'] === 'vlasnik') {
             $chat = (string) setting('telegram_owner_chat_id', '');
         }
         if ($chat !== '') {

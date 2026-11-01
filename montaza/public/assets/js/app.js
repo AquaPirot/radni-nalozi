@@ -178,10 +178,107 @@
     document.addEventListener('DOMContentLoaded', gateAll);
     if (document.readyState !== 'loading') gateAll();
 
-    // ── PWA: service worker (ikonica na početnom ekranu, keš statike) ──
-    if ('serviceWorker' in navigator && location.protocol === 'https:') {
-        window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
+    // ── PWA: service worker (ikonica na početnom ekranu, keš statike, obaveštenja) ──
+    const secure = location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname);
+    if ('serviceWorker' in navigator && secure) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
+
+    // ── Obaveštenja iz aplikacije (Web Push) ──
+    const vapidMeta = document.querySelector('meta[name="vapid-key"]');
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const pushOK = secure && vapidMeta && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    const iosNeedsInstall = isIOS && !standalone;
+    const bell = document.querySelector('[data-push-toggle]');
+    const banner = document.querySelector('[data-push-banner]');
+    const DISMISS = 'mz_push_dismissed';
+
+    function urlB64ToUint8(b64) {
+        const s = atob((b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+        return Uint8Array.from(s, (c) => c.charCodeAt(0));
+    }
+    function dismissed() { try { return localStorage.getItem(DISMISS) === '1'; } catch (_) { return false; } }
+
+    async function currentSub() {
+        if (!pushOK) return null;
+        const reg = await navigator.serviceWorker.ready;
+        return reg.pushManager.getSubscription();
+    }
+
+    async function refreshPushUI() {
+        if (!bell) return;
+        if (iosNeedsInstall) {
+            bell.hidden = false;
+            bell.classList.remove('on');
+            if (banner && !dismissed()) {
+                banner.querySelector('[data-push-banner-text]').textContent =
+                    'Na iPhone-u: dugme Deli → „Add to Home Screen", pa otvori Montažu sa ikonice i uključi obaveštenja.';
+                banner.querySelector('[data-push-enable]').hidden = true;
+                banner.hidden = false;
+            }
+            return;
+        }
+        if (!pushOK) return;
+        const sub = await currentSub();
+        const on = !!sub && Notification.permission === 'granted';
+        bell.hidden = false;
+        bell.classList.toggle('on', on);
+        bell.setAttribute('aria-pressed', on ? 'true' : 'false');
+        if (banner) banner.hidden = on || dismissed() || Notification.permission === 'denied';
+    }
+
+    async function enablePush() {
+        if (iosNeedsInstall) {
+            alert('Na iPhone-u obaveštenja rade samo iz instalirane aplikacije:\n\n1. dugme Deli (□↑)\n2. „Add to Home Screen"\n3. otvori Montažu sa početnog ekrana i dodirni zvonce.');
+            return;
+        }
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+            alert('Obaveštenja su blokirana za ovaj sajt.\nUključi ih u podešavanjima browsera (katanac pored adrese → Obaveštenja → Dozvoli).');
+            return refreshPushUI();
+        }
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            let sub = await reg.pushManager.getSubscription();
+            if (!sub) {
+                sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(vapidMeta.content) });
+            }
+            const fd = new FormData();
+            fd.append('action', 'subscribe');
+            fd.append('subscription', JSON.stringify(sub));
+            const res = await window.MZ.post('/api/push.php', fd);
+            if (!res.ok) throw new Error('server');
+        } catch (e) {
+            alert('Uključivanje obaveštenja nije uspelo. Proveri internet i pokušaj ponovo.');
+        }
+        refreshPushUI();
+    }
+
+    async function disablePush() {
+        if (!confirm('Isključiti obaveštenja na ovom telefonu?')) return;
+        const sub = await currentSub();
+        if (sub) {
+            const fd = new FormData();
+            fd.append('action', 'unsubscribe');
+            fd.append('endpoint', sub.endpoint);
+            await window.MZ.post('/api/push.php', fd).catch(() => {});
+            await sub.unsubscribe().catch(() => {});
+        }
+        refreshPushUI();
+    }
+
+    if (bell) {
+        bell.addEventListener('click', () => (bell.classList.contains('on') ? disablePush() : enablePush()));
+    }
+    if (banner) {
+        banner.querySelector('[data-push-enable]').addEventListener('click', enablePush);
+        banner.querySelector('[data-push-dismiss]').addEventListener('click', () => {
+            try { localStorage.setItem(DISMISS, '1'); } catch (_) {}
+            banner.hidden = true;
+        });
+    }
+    refreshPushUI();
 
     // ── Prikaži/sakrij (npr. pretraga) ──
     document.addEventListener('click', (e) => {

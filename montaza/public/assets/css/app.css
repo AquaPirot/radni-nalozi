@@ -612,3 +612,12 @@ a.seg { display: inline-flex; align-items: center; justify-content: center; }
 .hero { margin-top: calc(-1 * env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px); box-sizing: content-box; }
 .group-head { align-items: flex-end; }
 .group-head small { display: block; margin-top: 4px; font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .1em; }
+
+/* ══ Obaveštenja (push) ═══════════════════════════════════ */
+.push-btn.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.push-banner {
+    display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;
+    background: var(--surface); border: 1px solid rgba(198, 242, 78, .45); border-radius: 18px; padding: 16px 18px;
+}
+.push-banner[hidden] { display: none; }
+.push-banner > div:first-child { display: flex; flex-direction: column; gap: 4px; }

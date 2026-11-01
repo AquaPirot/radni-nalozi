@@ -45,6 +45,7 @@ require APP_DIR . '/lib/projects.php';
 require APP_DIR . '/lib/upload.php';
 require APP_DIR . '/lib/rules.php';
 require APP_DIR . '/lib/project_actions.php';
+require APP_DIR . '/lib/push.php';
 require APP_DIR . '/lib/notify.php';
 require APP_DIR . '/lib/item_actions.php';
 require APP_DIR . '/lib/tasks.php';

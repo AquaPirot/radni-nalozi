@@ -135,7 +135,8 @@ if (!empty($_GET['chats']) && setting('telegram_bot_token')) {
     }
 }
 
-$users = q_all("SELECT u.*, (SELECT COUNT(*) FROM login_attempts a WHERE a.username = u.username AND a.created_at > NOW() - INTERVAL 1 DAY) AS fails
+$users = q_all("SELECT u.*, (SELECT COUNT(*) FROM login_attempts a WHERE a.username = u.username AND a.created_at > NOW() - INTERVAL 1 DAY) AS fails,
+                       (SELECT COUNT(*) FROM push_subscriptions s WHERE s.user_id = u.id) AS phones
                 FROM users u ORDER BY active DESC, FIELD(role, 'vlasnik', 'hala', 'teren'), name");
 
 view('podesavanja', [

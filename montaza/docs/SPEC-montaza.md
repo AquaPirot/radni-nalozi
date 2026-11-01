@@ -188,7 +188,10 @@ Referentne slike makete su u `docs/` (PNG izvoz). Prati ih po rasporedu i stilu.
 
 ---
 
-## 9. Telegram obaveštenja
+## 9. Obaveštenja (na telefon iz aplikacije + Telegram)
+
+**Dodato:** obaveštenja stižu i direktno iz aplikacije (Web Push, VAPID — `lib/push.php`), bez Telegrama; svako ih uključuje zvoncem na svom telefonu. Telegram ostaje kao opcioni dodatni kanal. Ista pravila „ko šta dobija" važe za oba.
+
 
 Aleksandar već koristi Telegram bota za upite — koristi isti ili novi bot (token u `settings`). Svaki korisnik može imati svoj `telegram_chat_id`.
 
