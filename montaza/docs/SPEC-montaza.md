@@ -245,6 +245,7 @@ Tamni, moderan, „industrijski" stil — referenca su slike makete u `docs/`. B
 1. **Temelj** — struktura, `config.php.example`, `schema.sql`, konekcija, login/logout, uloge, `install.php`, osnovni layout + donji meni + dizajn tokeni.
 2. **Projekti** — novi projekat (sa šablonima stavki, tipovima, čelikom, započetim), lista po nedeljama, detalj projekta, upload slike lokacije i PDF naloga.
 3. **Stavke** — zatvaranje uz fotografije, zastoj, sva pravila iz tačke 5, naplata pre/posle, ekran za završetak montaže.
+3b. **Zadaci van projekata** — vidi tačku 15.
 4. **Plan** — nedelje, kapacitet, „nije raspoređeno", raspoređivanje.
 5. **Izveštaj** — mesečne brojke + print/PDF.
 6. **Telegram** — obaveštenja + ponedeljni pregled (cron).
@@ -252,13 +253,30 @@ Tamni, moderan, „industrijski" stil — referenca su slike makete u `docs/`. B
 
 ---
 
-## 13. Odluke koje vlasnik još treba da potvrdi (pitaj pre faze 2 ako nije upisano)
+## 13. Odluke vlasnika (potvrđeno)
 
-- [ ] Kapacitet montaža po nedelji: ___
-- [ ] Minimalan broj slika po stavci hale: ___ (predlog 1) i za montažu: ___ (predlog 3)
-- [ ] Imena i uloge korisnika: ___
-- [ ] Da li hala vidi i teren stavke (samo čitanje)? Predlog: da, samo čitanje.
-- [ ] Valuta za naplatu: EUR (predlog) ili RSD?
+- [x] Kapacitet montaža po nedelji: **5**
+- [x] Minimalan broj slika po stavci hale: **1**, za montažu: **3**
+- [x] Korisnici: **Aleksandar** — vlasnik, **Oliver** — hala (šef proizvodnje), **Steva** — teren (šef terenske ekipe)
+- [x] Hala vidi teren stavke: **da, samo čitanje**
+- [x] Valuta za naplatu: **EUR** (naplata pre ili posle montaže)
+- [x] Izveštaj: **broj završenih pergola**, bez m² (za sada)
+
+---
+
+## 15. Zadaci van projekata (dodato posle faze 2, radi se kao faza 3b)
+
+Poslovi koji nisu deo projekta: popis, izrada alata, kombi na servis, nabavka…
+
+- Tabela `tasks`: `id, title, description, assigned_to (user), created_by, due_date NULL, priority ENUM('normal','hitno'), requires_photo TINYINT, project_id NULL (opciona veza), status ENUM('ceka','u_toku','zavrseno','zastoj'), completed_at, completed_by, note, created_at`. Slike idu u `files` (sa `task_id`), zastoji u `stoppages` (sa `task_id`).
+- **Svi zadaju:** vlasnik zadaje bilo kome; hala i teren mogu da zapišu zadatak sebi ili da traže nešto od vlasnika (npr. „nabaviti šrafove"). Vlasnik vidi sve zadatke; ostali vide zadatke koje su dobili ili zadali.
+- **Slika se bira po zadatku:** štikla „traži sliku" pri zadavanju; inače zatvaranje jednim klikom (slika i napomena opcione).
+- **Bez ponavljanja** u v1.
+- Zastoj kao na stavci projekta (razlog + napomena).
+- Ako je vezan za projekat, zadatak se vidi i na detalju projekta.
+- Donji meni: vlasnik — Projekti · Zadaci · Plan · Izveštaj; hala/teren — Projekti · Zadaci.
+- Telegram (faza 6): novi zadatak → onome kome je dodeljen; završen / zastoj → onome ko je zadao.
+- Izveštaj (faza 5): broj završenih i zakasnelih zadataka u mesecu.
 
 ---
 
