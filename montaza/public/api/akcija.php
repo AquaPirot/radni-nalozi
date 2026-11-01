@@ -50,6 +50,10 @@ try {
             item_start($id, $user);
             flash('ok', 'U radu.');
             break;
+        case 'item_done':
+            item_complete($id, $user, '', []);
+            flash('ok', 'Završeno.');
+            break;
         case 'item_reset':
             item_reset($id, $user);
             flash('ok', 'Stavka je vraćena na „čeka".');

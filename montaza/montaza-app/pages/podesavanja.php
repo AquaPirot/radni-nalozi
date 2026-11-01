@@ -14,7 +14,6 @@ if (is_post()) {
     switch ($action) {
         case 'settings':
             $nums = [
-                'min_photos_hala'    => [0, 10, 'Slike u hali'],
                 'min_photos_montaza' => [1, 20, 'Slike za montažu'],
             ];
             foreach ($nums as $k => [$min, $max, $label]) {

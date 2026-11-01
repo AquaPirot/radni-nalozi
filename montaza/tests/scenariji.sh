@@ -43,15 +43,15 @@ ok "slika lokacije (PRE)" "$(sql "SELECT COUNT(*) FROM files WHERE project_id=$P
 has "u spisku projekata, grupa po danu montaže" "$(page h.txt projekti | grep -c "Petrović $TAG")"
 has "na Montažama: telefon i adresa" "$(page t.txt montaze | grep -A12 "Petrović $TAG" | grep -c 'tel:0641234567\|Kneza Miloša 10')"
 
-echo "2. Hala radi stavke (slika obavezna), teren ne može hala-stavke"
+echo "2. Hala radi stavke jednim dodirom (slika nije potrebna), teren ne može hala-stavke"
 AL=$(item "$P" aluminijum); CE=$(item "$P" celik)
-act t.txt item_start "$CE"
-ok "teren ne može da počne čelik" "$(sql "SELECT status FROM project_items WHERE id=$CE")" "ceka"
+act t.txt item_done "$CE"
+ok "teren ne može da završi čelik" "$(sql "SELECT status FROM project_items WHERE id=$CE")" "ceka"
 act h.txt item_start "$CE"
 ok "hala počinje čelik" "$(sql "SELECT status FROM project_items WHERE id=$CE")" "u_toku"
-post h.txt "?p=stavka&id=$CE" -d "note=bez slike" >/dev/null
-ok "bez slike se ne završava" "$(sql "SELECT status FROM project_items WHERE id=$CE")" "u_toku"
-for k in celik aluminijum cerada pakovanje; do done_item h.txt "$(item "$P" $k)" 1; done
+act h.txt item_done "$CE"
+ok "čelik završen bez slike" "$(sql "SELECT status FROM project_items WHERE id=$CE")" "zavrseno"
+for k in aluminijum cerada pakovanje; do act h.txt item_done "$(item "$P" $k)"; done
 ok "sve hala-stavke završene" "$(sql "SELECT COUNT(*) FROM project_items WHERE project_id=$P AND responsible='hala' AND status<>'zavrseno'")" "0"
 has "status: Spremno za montažu" "$(page v.txt "projekat&id=$P" | grep -c 'Spremno za montažu')"
 

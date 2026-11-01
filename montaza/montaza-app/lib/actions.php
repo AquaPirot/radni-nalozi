@@ -216,7 +216,7 @@ function item_complete(int $id, array $user, string $note, array $fotoIds): void
         $kind = item_is_field($it['kind']) ? ($it['kind'] === 'dijagnoza' ? 'foto' : 'posle') : 'foto';
         attach_temp_files($fotoIds, (int) $p['id'], ['kind' => $kind, 'item_id' => $id], (int) $user['id']);
         $have = (int) q_val('SELECT COUNT(*) FROM files WHERE item_id = ?', [$id]);
-        $min = $it['kind'] === 'nalog' ? 0 : (int) setting(item_is_field($it['kind']) ? 'min_photos_montaza' : 'min_photos_hala', item_is_field($it['kind']) ? '3' : '1');
+        $min = item_min_photos($it);
         if ($have < $min) {
             throw new RuleError('Potrebno je bar ' . $min . ($min === 1 ? ' slika' : ' slike') . ' (sada ' . $have . ').');
         }

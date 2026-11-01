@@ -65,6 +65,12 @@ function item_template(string $type, bool $steel): array
     return array_values(array_filter(TEMPLATE_STD, fn($t) => $t[0] !== 'celik' || $steel));
 }
 
+/** Koliko slika treba za završetak: samo montaža/servis traže slike (podešavanje), ostalo ne. */
+function item_min_photos(array $item): int
+{
+    return in_array($item['kind'], ['montaza', 'servis'], true) ? (int) setting('min_photos_montaza', '3') : 0;
+}
+
 /** Stavke na kojima se prilaže više slika (teren). */
 function item_is_field(string $kind): bool
 {

@@ -24,7 +24,8 @@ Dogovor sa vlasnikom posle v2 („previše informacija, nije jednostavno"):
 
 Pravila:
 - Nalog se sam završava kad se doda PDF.
-- Hala-stavke se završavaju sa najmanje 1 slikom, montaža sa najmanje 3 (menja se u Podešavanjima).
+- Hala-stavke (čelik, aluminijum, cerada, pakovanje, materijal) se završavaju jednim dodirom, bez slike. Slike se mogu dodati na projekat kad god zatreba.
+- Montaža i servis traže najmanje 3 slike (broj se menja u Podešavanjima).
 - Kad je sve završeno, projekat je završen.
 
 ## Ko šta menja

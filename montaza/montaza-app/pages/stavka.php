@@ -27,7 +27,7 @@ if (is_post()) {
     }
 }
 $photos = q_all('SELECT * FROM files WHERE item_id = ? AND pending = 0 ORDER BY id', [$it['id']]);
-$min = $it['kind'] === 'nalog' ? 0 : (int) setting(item_is_field($it['kind']) ? 'min_photos_montaza' : 'min_photos_hala', item_is_field($it['kind']) ? '3' : '1');
+$min = item_min_photos($it);
 
 view('stavka', [
     'title'    => ITEM_LABELS[$it['kind']],

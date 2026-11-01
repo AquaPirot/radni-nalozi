@@ -87,8 +87,12 @@ $form = fn(string $action, string $inner, string $extra = '') => '<form method="
                     <?php if ($it['status'] === 'ceka' && $it['kind'] !== 'nalog'): ?>
                         <form method="post" action="<?= e(url() . 'api/akcija.php') ?>"><?= csrf_field() ?><?= once_field() ?><input type="hidden" name="action" value="item_start"><input type="hidden" name="id" value="<?= $iid ?>"><input type="hidden" name="back" value="<?= e(here()) ?>"><button class="btn ghost sm" type="submit">Počinjem</button></form>
                     <?php endif; ?>
-                    <a class="btn primary sm" href="<?= e(url('stavka', ['id' => $iid])) ?>">Završi</a>
-                <?php elseif ($it['status'] === 'zavrseno' && ($isOwner || !empty($photoCount[$iid]))): ?>
+                    <?php if (item_min_photos($it) > 0): ?>
+                        <a class="btn primary sm" href="<?= e(url('stavka', ['id' => $iid])) ?>"><?= icon('camera', 16) ?>Završi</a>
+                    <?php else: ?>
+                        <form method="post" action="<?= e(url() . 'api/akcija.php') ?>" data-confirm="<?= e(ITEM_LABELS[$it['kind']]) ?> — završeno?"><?= csrf_field() ?><?= once_field() ?><input type="hidden" name="action" value="item_done"><input type="hidden" name="id" value="<?= $iid ?>"><input type="hidden" name="back" value="<?= e(here()) ?>"><button class="btn primary sm" type="submit"><?= icon('check', 16) ?>Završeno</button></form>
+                    <?php endif; ?>
+                <?php elseif ($it['status'] === 'zavrseno' && !empty($photoCount[$iid])): ?>
                     <a class="btn link sm" href="<?= e(url('stavka', ['id' => $iid])) ?>">Detalji</a>
                 <?php endif; ?>
             </div>

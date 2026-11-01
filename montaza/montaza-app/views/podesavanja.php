@@ -65,8 +65,7 @@ $tgOn = $token !== '';
     <input type="hidden" name="action" value="settings">
     <h2 class="h2">Pravila</h2>
     <div class="grid2">
-        <label class="field"><span>Najmanje slika — hala</span><input class="input mono" name="min_photos_hala" type="number" min="0" max="10" value="<?= e(setting('min_photos_hala', '1')) ?>"></label>
-        <label class="field"><span>Najmanje slika — montaža</span><input class="input mono" name="min_photos_montaza" type="number" min="1" max="20" value="<?= e(setting('min_photos_montaza', '3')) ?>"></label>
+        <label class="field"><span>Najmanje slika za montažu</span><input class="input mono" name="min_photos_montaza" type="number" min="1" max="20" value="<?= e(setting('min_photos_montaza', '3')) ?>"></label>
     </div>
 
     <h2 class="h2">Telegram <span class="muted small">(opciono)</span></h2>
