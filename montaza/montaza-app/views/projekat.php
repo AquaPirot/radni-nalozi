@@ -172,7 +172,7 @@ $vStatus = ['planiran' => ['ceka', 'Planirano'], 'u_toku' => ['u_toku', 'U radu'
     <?php if ($parent || $children): ?>
         <section class="list">
             <?php if ($parent): ?><a class="list-row" href="<?= e(url('projekat', ['id' => $parent['id']])) ?>"><span>Reklamacija za: <strong><?= e($parent['customer_name']) ?></strong> <span class="mono muted small"><?= e($parent['code']) ?></span></span><?= icon('chevron') ?></a><?php endif; ?>
-            <?php foreach ($children as $c): ?><a class="list-row" href="<?= e(url('projekat', ['id' => $c['id']])) ?>"><span>Reklamacija <span class="mono muted small"><?= e($c['code']) ?></span></span><?= icon('chevron') ?></a><?php endforeach; ?>
+            <?php foreach ($children as $c): ?><a class="list-row" href="<?= e(url('projekat', ['id' => $c['id']])) ?>"><span>Reklamacija <span class="mono muted small"><?= e($c['code']) ?></span> · <span class="<?= $c['status'] === 'zavrsen' ? 'muted' : 'warn' ?>"><?= $c['status'] === 'zavrsen' ? 'rešena' : 'otvorena' ?></span></span><?= icon('chevron') ?></a><?php endforeach; ?>
         </section>
     <?php endif; ?>
     <?php if ($isOwner && $p['archived_at']): ?>

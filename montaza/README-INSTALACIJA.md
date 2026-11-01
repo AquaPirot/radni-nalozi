@@ -32,7 +32,7 @@ Otvori **https://montaza.aggroup.rs**. Sam te prebaci na instalaciju:
 2. **Korak 2 — nalozi:** imena su već upisana (Aleksandar, Oliver, Steva). Svako upiše **svoju lozinku** od 4 cifre → **Napravi naloge**.
 3. Na kraju instalacija:
    - sama obriše `install.php`;
-   - ispiše komandu za ponedeljni pregled (korak 7). Kopiraj je.
+   - ispiše dve komande za dnevne poslove (korak 7). Kopiraj ih.
 
 Uradi korak 4 odmah posle raspakivanja: dok instalacija nije završena, `install.php` može da otvori bilo ko.
 
@@ -102,6 +102,35 @@ Proba bez slanja: `php dnevni.php --dry-run`.
 **Vraćanje kopije:** preuzmi `.sql.gz` iz File Managera (`montaza-app/backups/`), pa ga uvezi preko phpMyAdmin → Import.
 
 ---
+
+## Prelazak na verziju 2 (aplikacija je već instalirana i radi)
+
+Podaci ostaju sačuvani: projekti, slike, zadaci, uplate i nalozi. **Ne** uvoziš SQL i **ne** pokrećeš instalaciju.
+
+1. **Kopija pre izmene:** phpMyAdmin → baza `aggroup_montaza` → **Export** → **Go**. Sačuvaj fajl.
+2. File Manager → folder subdomena → **Otpremi** `montaza-azuriranje-*.zip` → desni klik → **Izdvoji** u isti folder. Kad pita, **zameni** postojeće fajlove. Zatim obriši ZIP.
+   `config.php`, `uploads/` i baza ostaju netaknuti.
+3. Otvori **https://montaza.aggroup.rs**. Prvo otvaranje sámo nadogradi bazu, za nekoliko sekundi:
+   - svaki projekat dobije svoj sistem;
+   - stavke postanu faze proizvodnje;
+   - montaže postanu termini;
+   - naplate postanu uplate.
+   Ako u tom trenutku još neko otvori aplikaciju, vidi poruku „Aplikacija se ažurira — pokušaj ponovo za minut".
+4. **Podešavanja** (zupčanik):
+   - **Ekipe:** proveri „Steva + ekipa". Dodaj ostale ekipe ako ih imaš.
+   - **Sistemi i faze:** proveri spisak faza za svaki tip (BIOFIX, ZIP screen…). Promena važi za nove projekte.
+5. **Cron:** ako si imao ponedeljni pregled, obriši ga i dodaj dva nova posla iz koraka 7.
+6. Na telefonima: zatvori Montažu i otvori je ponovo. Tako se učitava nova verzija.
+
+**Proveri posle prelaska:**
+- **Danas** prikazuje kartice „Traži odluku / U zastoju / Kasni / Za naplatu";
+- otvori jedan stari projekat → tab **Proizvodnja**: tamo su faze;
+- otvori tab **Montaža**: tamo su termini.
+
+Ako nešto ne valja, vrati staro:
+1. Otpremi i izdvoji prethodni ZIP.
+2. U phpMyAdmin-u obriši sve tabele.
+3. Uvezi kopiju iz koraka 1.
 
 ## Pregaziti staru aplikaciju na istom subdomenu i u istoj bazi
 

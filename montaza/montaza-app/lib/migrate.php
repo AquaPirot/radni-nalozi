@@ -11,8 +11,11 @@ function schema_version(): int
 {
     try {
         return (int) (q_val("SELECT `value` FROM settings WHERE `key` = 'schema_version'") ?? 1);
-    } catch (PDOException) {
-        return 0; // nema tabela
+    } catch (PDOException $ex) {
+        if ($ex->getCode() === '42S02') {
+            return 0; // nema tabela (još nije instalirano)
+        }
+        throw $ex; // npr. pogrešna lozinka baze — ne sme da se proguta
     }
 }
 

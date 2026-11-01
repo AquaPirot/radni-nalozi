@@ -41,3 +41,25 @@ Završena montaža ≠ naplaćeno. Projekat u proizvodnji može istovremeno biti
 5. Izveštaj v2, dnevni cron (rokovi, sutrašnje montaže, ponedeljni pregled, rezervna kopija).
 6. Dizajn (svetla/tamna tema, računar sa bočnim menijem) i pouzdanost (slike jedna po jedna sa ponovnim slanjem, zaštita od duplog unosa, auto-čuvanje, arhiva).
 7. Provera kroz 8 scenarija iz predloga.
+
+## Provera (tests/scenariji.sh)
+
+Automatski test prolazi kroz prave ekrane, kao Aleksandar, Oliver i Steva, i posle svakog koraka proverava bazu. Pokretanje: `B=http://127.0.0.1:8099 DB=montaza bash tests/scenariji.sh`.
+
+| # | Scenario | Šta se proverava |
+|---|---|---|
+| 1 | Jedna pergola, jedna ekipa, jedan dan | puštanje → faze → potvrđen termin bez izuzetka → celo → projekat završen, uplata upisana |
+| 2 | Pergola + ZIP-ovi + stakleni sistem | 3 sistema i 6 komada, svaki sa svojim fazama, mere u metrima (2,5), prikaz na kartici |
+| 3 | Više dana, delimično | trajanje 3 dana; „delimično" bez opisa ostatka se odbija; dorada se pravi sama; projekat ostaje otvoren; vlasnik to vidi kao odluku |
+| 4 | Zastoj u materijalu pomera termin | faza u zastoju; tekst „razlog — sledeći korak — odgovoran — ugrožen termin"; pomeranje traži razlog; razlog ide u istoriju; pomeren termin postaje okviran |
+| 5 | Reklamacija na završen projekat | veza u oba smera, bez naplate, filter Reklamacije |
+| 6 | Delimična naplata i predaja novca | manja uplata traži potvrdu duga; dug ostaje za naplatu; predaju potvrđuje samo vlasnik; ostatak na račun zatvara dug |
+| 7 | Slaba veza i slike | slika se šalje odmah (na čekanju); dvostruko slanje ne pravi dvostruku uplatu; tuđa slika na čekanju se ne vidi i ne može da se zakači |
+| 8 | Izmena naloga posle preuzimanja | v2 nije preuzeta; hala je vidi na Danas; sledeća faza je blokirana dok se v2 ne preuzme; stara verzija se ne može preuzeti; istorija |
+
+Rezultat: 47/47.
+
+Nadogradnja je proverena i na kopiji v1 podataka (13 projekata):
+- dobijeno je 13 sistema, 37 faza, 15 termina, 3 naloga i 2 uplate;
+- tri istovremena zahteva pokreću migraciju samo jednom;
+- otvoreno je 192 strane za sve tri uloge, bez greške.
