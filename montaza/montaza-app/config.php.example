@@ -1,0 +1,29 @@
+<?php
+// MONTAŽA — konfiguracija
+// Kopiraj ovaj fajl u config.php i popuni vrednosti.
+// config.php se NIKAD ne stavlja u git.
+
+return [
+    'db' => [
+        'host'    => 'localhost',
+        'name'    => 'xxx_montaza',
+        'user'    => 'xxx_montaza',
+        'pass'    => 'PROMENI_ME',
+        'charset' => 'utf8mb4',
+    ],
+
+    // Pun URL bez kose crte na kraju
+    'base_url' => 'https://montaza.aggroup.rs',
+
+    // 'production' isključuje prikaz grešaka; 'dev' ih prikazuje
+    'env' => 'production',
+
+    'timezone' => 'Europe/Belgrade',
+
+    // Log grešaka. Ako je moguće, putanja VAN web root-a.
+    // Prazno = montaza-app/logs/app.log
+    'log_file' => '',
+
+    // Folder za upload. Prazno = <web root>/uploads
+    'upload_dir' => '',
+];

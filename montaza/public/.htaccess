@@ -1,0 +1,22 @@
+# MONTAŽA — web root
+
+Options -Indexes
+
+# Uvek HTTPS (kamera na telefonu ne radi bez njega)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# Zabrani pristup pomoćnim fajlovima
+<FilesMatch "^(_init\.php|.*\.(sql|md|log|example))$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "same-origin"
+</IfModule>

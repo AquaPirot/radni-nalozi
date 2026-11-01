@@ -1,0 +1,2 @@
+# Ako je ovaj folder unutar web root-a, zabrani SVAKI pristup spolja.
+Require all denied

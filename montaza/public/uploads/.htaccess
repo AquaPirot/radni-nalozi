@@ -1,0 +1,10 @@
+# Fajlovi se serviraju samo kroz file.php?id= (provera prava).
+# Direktan pristup i izvršavanje skripti su zabranjeni.
+Require all denied
+
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+Options -ExecCGI -Indexes
