@@ -19,7 +19,7 @@ Ako hosting ne dozvoljava folder van `public_html`, stavi `montaza-app/` **unuta
 - [x] Faza 3b — Zadaci van projekata (popis, alat, servis, nabavka)
 - [x] Faza 4 — Plan (4 nedelje, kapacitet, nije raspoređeno, prošle nedelje, raspoređivanje)
 - [x] Faza 5 — Izveštaj (mesečne brojke, zastoji, najsporija stavka, naplata, zadaci, PDF sa slikama)
-- [ ] Faza 6 — Telegram
+- [x] Faza 6 — Telegram (obaveštenja, ponedeljni pregled), podešavanja i korisnici
 - [ ] Faza 7 — PWA i ZIP za cPanel
 
 ## Lokalno pokretanje

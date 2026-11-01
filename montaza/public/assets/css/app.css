@@ -598,3 +598,10 @@ a.seg { display: inline-flex; align-items: center; justify-content: center; }
 .rcard summary strong, .rcard.static strong { font-size: 17px; }
 .rcard[open] summary .ic { transform: rotate(90deg); }
 .rcard ul { list-style: none; padding: 0 20px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+/* ══ FAZA 6: podešavanja ══════════════════════════════════ */
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.grid3 .field > span { font-size: 13px; }
+.rcard .pad { padding: 0 20px 18px; }
+.user-card.off { opacity: .6; }
+.user-card summary > span { gap: 4px; }
