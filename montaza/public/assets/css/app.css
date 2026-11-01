@@ -180,7 +180,7 @@ textarea.input { padding: 14px 16px; min-height: 96px; resize: vertical; }
 .input::placeholder { color: #6E747B; }
 .input:focus { outline: none; border-color: var(--accent); }
 
-.check { display: flex; align-items: center; gap: 12px; min-height: 44px; cursor: pointer; }
+.check { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; cursor: pointer; }
 .check input { position: absolute; opacity: 0; pointer-events: none; }
 .check .box {
     width: 24px; height: 24px; flex-shrink: 0;
@@ -446,3 +446,73 @@ a.seg { display: inline-flex; align-items: center; justify-content: center; }
     .toggle-row .due { width: 130px; }
     .segctl span { font-size: 14px; }
 }
+
+/* ══ FAZA 3 ═══════════════════════════════════════════════ */
+.grow { flex: 1; min-width: 0; }
+.center { text-align: center; }
+.btn-row { display: flex; gap: 10px; align-items: stretch; }
+.btn-row .btn.warn { padding: 0 18px; }
+.tl-card.warn { border-color: rgba(255, 138, 61, .5); }
+.tl-note { margin-top: 4px; font-style: italic; }
+
+/* Pre / posle */
+.prepost { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pp-tile {
+    position: relative; aspect-ratio: 1 / 1.1; border-radius: 18px; overflow: hidden;
+    background: #23272C; display: grid; place-items: center; color: #4A5058;
+}
+.pp-tile img, .pp-tile .dz-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pp-label {
+    position: absolute; z-index: 2; top: 10px; left: 10px;
+    padding: 6px 10px; border-radius: 8px; background: rgba(14, 15, 17, .85);
+    font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--text);
+}
+.pp-shoot { background: transparent; border: 1.5px dashed var(--accent); cursor: pointer; color: var(--text); }
+.pp-shoot input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.pp-shoot .dz-empty { padding: 12px; gap: 6px; text-align: center; }
+.pp-shoot.has-img { border-style: solid; }
+.pp-shoot.has-img .dz-empty { display: none; }
+
+.thumbs { display: flex; flex-wrap: wrap; gap: 10px; }
+.thumb {
+    position: relative; width: 96px; height: 96px; border-radius: 14px; overflow: hidden;
+    background: #23272C; display: grid; place-items: center; flex-shrink: 0;
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb.add { background: transparent; border: 1.5px dashed #3A3F45; cursor: pointer; color: var(--text-2); }
+.thumb.add input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.thumb.new { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.checks { display: flex; flex-direction: column; }
+.check.row { min-height: 60px; border-bottom: 1px solid var(--border); font-size: 17px; }
+.check.row .ic { color: var(--muted); }
+.check input:disabled + .box { opacity: .8; }
+.checks .amount { margin: 10px 0; }
+
+.sticky-foot {
+    position: sticky; bottom: 0; z-index: 5;
+    margin: 8px -16px 0; padding: 14px 16px calc(14px + var(--safe-b));
+    background: linear-gradient(to top, var(--bg) 75%, rgba(14, 15, 17, 0));
+    display: flex; flex-direction: column; gap: 10px;
+}
+.sticky-foot p:empty { display: none; }
+
+/* Zastoj */
+.radios { display: flex; flex-direction: column; gap: 8px; }
+.radio { position: relative; display: block; }
+.radio input { position: absolute; opacity: 0; inset: 0; }
+.radio span {
+    display: flex; align-items: center; min-height: 54px; padding: 0 18px;
+    border-radius: 14px; border: 1px solid var(--border); background: var(--surface);
+    font-size: 17px; cursor: pointer;
+}
+.radio input:checked + span { border-color: var(--warn); color: var(--warn); background: rgba(255, 138, 61, .08); }
+.radio input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Galerija */
+.gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.gallery a { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: #23272C; }
+.gallery img { width: 100%; height: 100%; object-fit: cover; }
+.thumb[hidden] { display: none !important; }
+.btn { white-space: nowrap; }
+.btn-row .btn { font-size: 16px; padding: 0 16px; }

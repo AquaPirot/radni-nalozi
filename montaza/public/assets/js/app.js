@@ -93,6 +93,9 @@
         const job = (input.hasAttribute('data-resize') ? handleResize(input) : Promise.resolve()).then(() => {
             showPreview(input);
             showFilename(input);
+            if (input.hasAttribute('data-add-photos')) addPhotos(input);
+            const g = input.closest('form[data-gate]');
+            if (g) gate(g);
             const form = input.closest('form[data-autosubmit]');
             if (form && input.files.length) form.requestSubmit ? form.requestSubmit() : form.submit();
         });
@@ -124,6 +127,56 @@
             HTMLFormElement.prototype.submit.call(form);
         }
     });
+
+    // ── Dodavanje više slika: svaki izbor ostaje u svom inputu, "+" se pravi ponovo ──
+    function addPhotos(input) {
+        const tile = input.closest('.thumb.add');
+        if (!tile || !input.files.length) return;
+        for (const f of input.files) {
+            const t = document.createElement('span');
+            t.className = 'thumb new';
+            const img = document.createElement('img');
+            img.alt = '';
+            img.src = URL.createObjectURL(f);
+            t.appendChild(img);
+            tile.before(t);
+        }
+        // input ostaje u formi (sakriven), a pravi se novo "+" polje
+        const fresh = tile.cloneNode(true);
+        const newInput = fresh.querySelector('input');
+        newInput.value = '';
+        tile.classList.remove('add');
+        tile.hidden = true;
+        tile.after(fresh);
+        gateAll();
+    }
+
+    // ── Zaključano dugme dok sve nije ispunjeno (server svejedno proverava) ──
+    function gate(form) {
+        const miss = [];
+        const min = +(form.dataset.minPhotos || 0);
+        let photos = +(form.dataset.existingPhotos || 0);
+        form.querySelectorAll('input[type=file][data-count]').forEach((i) => { photos += i.files.length; });
+        const posle = form.querySelector('input[name=posle]');
+        const needPosle = form.dataset.needPosle === '1';
+        if (needPosle && !(posle && posle.files.length)) miss.push('slika POSLE');
+        if (photos < min) miss.push(min === 1 ? 'fotografija' : `još ${min - photos} ${min - photos === 1 ? 'slika' : 'slike'}`);
+        form.querySelectorAll('input[type=checkbox][data-req]').forEach((c) => { if (!c.checked) miss.push(c.dataset.req); });
+        const out = form.querySelector('[data-missing]');
+        if (out) out.textContent = miss.length ? 'Fali: ' + miss.join(', ') : '';
+        form.querySelectorAll('[data-show-if-missing="posle"]').forEach((el) => {
+            el.hidden = !(needPosle && !(posle && posle.files.length));
+        });
+        const btn = form.querySelector('button[type=submit]');
+        if (btn && !form.dataset.submitting) btn.disabled = miss.length > 0;
+    }
+    function gateAll() { document.querySelectorAll('form[data-gate]').forEach(gate); }
+    document.addEventListener('change', (e) => {
+        const form = e.target.closest && e.target.closest('form[data-gate]');
+        if (form) setTimeout(() => gate(form), 0);
+    });
+    document.addEventListener('DOMContentLoaded', gateAll);
+    if (document.readyState !== 'loading') gateAll();
 
     // ── Prikaži/sakrij (npr. pretraga) ──
     document.addEventListener('click', (e) => {

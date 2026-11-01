@@ -123,3 +123,81 @@ function rule_maybe_complete_project(int $projectId): bool
     }
     return $n > 0;
 }
+
+// ── Faza 3: stavke ──────────────────────────────────────────
+
+/** Završna terenska stavka na kojoj važe pravila naplate (montaža; servis kod reklamacije). */
+function is_payment_item(array $item): bool
+{
+    return in_array($item['kind'], ['montaza', 'servis'], true);
+}
+
+/** Da li korisnik sme da menja ovu stavku (počne, završi, prijavi zastoj). */
+function can_act_item(array $user, array $project, array $item): bool
+{
+    if ($project['status'] !== 'aktivan' || $item['status'] === 'zavrseno') {
+        return false;
+    }
+    return $user['role'] === 'vlasnik' || $user['role'] === $item['responsible'];
+}
+
+/** Pravilo 3: može li stavka da pređe u "u toku". Vraća null ili razlog. */
+function rule_start_blocked(array $project, array $item): ?string
+{
+    if (is_payment_item($item) && $project['payment_when'] === 'pre' && !$project['payment_confirmed_at']) {
+        return 'Naplata PRE početka nije potvrđena.';
+    }
+    return null;
+}
+
+/**
+ * Šta fali za zatvaranje stavke (pravila 1, 2, 3, 4, 6). Prazna lista = može.
+ * $s: photos (ukupno slika na stavci posle ovog slanja), posle (ima sliku POSLE),
+ *     paid (naplata potvrđena ili se upravo potvrđuje), video, handover, pdf
+ */
+function rule_completion_missing(array $project, array $item, array $s): array
+{
+    $miss = [];
+    if ($item['kind'] === 'nalog' && empty($s['pdf'])) {
+        $miss[] = 'PDF nalog';
+    }
+    if ($item['responsible'] === 'hala') {
+        $min = (int) setting('min_photos_hala', '1');
+        if ($s['photos'] < $min) {
+            $miss[] = $min === 1 ? 'fotografija' : "bar $min fotografije";
+        }
+    }
+    if (is_payment_item($item) && $project['payment_when'] !== 'ne' && empty($s['paid'])) {
+        $miss[] = $project['payment_when'] === 'pre' ? 'naplata pre početka' : 'potvrda naplate';
+    }
+    if ($item['kind'] === 'montaza') {
+        if (empty($s['posle'])) {
+            $miss[] = 'slika POSLE';
+        }
+        $min = (int) setting('min_photos_montaza', '3');
+        if ($s['photos'] < $min) {
+            $miss[] = "ukupno $min slike (ima {$s['photos']})";
+        }
+        if (empty($s['video'])) {
+            $miss[] = 'video u Viber grupi';
+        }
+        if (empty($s['handover'])) {
+            $miss[] = 'predat daljinski i uputstvo';
+        }
+    }
+    return $miss;
+}
+
+/** Pravilo 10: upozorenje (ne blokada) ako montaža kreće a pakovanje nije zatvoreno. */
+function rule_montaza_warning(array $items, array $item): ?string
+{
+    if ($item['kind'] !== 'montaza') {
+        return null;
+    }
+    foreach ($items as $i) {
+        if ($i['kind'] === 'pakovanje' && $i['status'] !== 'zavrseno') {
+            return 'Pakovanje još nije zatvoreno.';
+        }
+    }
+    return null;
+}

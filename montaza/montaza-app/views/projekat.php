@@ -98,7 +98,10 @@ $logLabels = [
     </header>
     <ol class="timeline">
         <?php foreach ($items as $it):
-            $isCur = $cur && $cur['id'] === $it['id'] && $p['status'] === 'aktivan';
+            $canAct = can_act_item($user, $p, $it);
+            // Kartica sa dugmadima: trenutna stavka, stavka u toku ili u zastoju
+            $isCur = $p['status'] === 'aktivan' && $it['status'] !== 'zavrseno'
+                && (($cur && $cur['id'] === $it['id']) || in_array($it['status'], ['u_toku', 'zastoj'], true));
             $itFiles = $filesByItem[$it['id']] ?? [];
             $pdfs = array_values(array_filter($itFiles, fn($f) => $f['kind'] === 'nalog_pdf'));
             $photos = array_values(array_filter($itFiles, fn($f) => $f['kind'] !== 'nalog_pdf'));
@@ -111,21 +114,59 @@ $logLabels = [
             } else {
                 $meta = ($it['due_date'] ? 'ROK ' . fmt_dm($it['due_date']) . ' · ' : '') . $resp;
             }
+            $itStop = $it['status'] === 'zastoj' ? q_one('SELECT * FROM stoppages WHERE item_id = ? AND resolved_at IS NULL ORDER BY id DESC LIMIT 1', [$it['id']]) : null;
+            $payFirst = $canAct && $it['status'] === 'ceka' && is_payment_item($it) && rule_start_blocked($p, $it);
+            $warnMontaza = $isCur && $canAct ? rule_montaza_warning($items, $it) : null;
         ?>
             <li class="tl <?= $dot ?>">
                 <span class="tl-dot"><?= $it['status'] === 'zavrseno' ? icon('check', 18) : '' ?></span>
                 <?php if ($isCur): ?>
-                    <div class="tl-card">
+                    <div class="tl-card<?= $it['status'] === 'zastoj' ? ' warn' : '' ?>">
                         <div class="row-between">
                             <strong><?= e(ITEM_LABELS[$it['kind']]) ?></strong>
-                            <span class="mono small"><?= e($meta) ?></span>
+                            <span class="mono small"><?= $it['status'] === 'u_toku' ? 'U TOKU · ' : '' ?><?= e($meta) ?></span>
                         </div>
+                        <?php if ($itStop): ?>
+                            <div class="small warn">Zastoj: <?= e(REASON_LABELS[$itStop['reason']]) ?><?= $itStop['note'] ? ' — ' . e($itStop['note']) : '' ?></div>
+                        <?php endif; ?>
+                        <?php if ($warnMontaza): ?><div class="small warn"><?= e($warnMontaza) ?></div><?php endif; ?>
+                        <?php if ($photos): ?>
+                            <a class="small muted" href="<?= e(url('galerija', ['id' => $p['id'], 'item' => $it['id']])) ?>"><?= count($photos) ?> foto do sada</a>
+                        <?php endif; ?>
+
                         <?php if ($it['kind'] === 'nalog' && $isOwner): ?>
                             <form method="post" action="<?= e(url() . 'api/nalog_pdf.php') ?>" enctype="multipart/form-data" data-autosubmit>
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
                                 <label class="btn primary block"><input type="file" name="nalog_pdf" accept="application/pdf,.pdf" hidden><?= icon('file', 20) ?>Zakači PDF i završi</label>
                             </form>
+                        <?php elseif ($payFirst): ?>
+                            <form method="post" action="<?= e(url() . 'api/stavka.php') ?>" class="stack">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="start">
+                                <input type="hidden" name="item" value="<?= (int) $it['id'] ?>">
+                                <label class="amount"><span>Naplaćeno</span>
+                                    <input class="mono" name="paid_amount" value="<?= e(rtrim(rtrim((string) $p['payment_amount'], '0'), '.')) ?>" inputmode="decimal"><span class="mono">€</span></label>
+                                <div class="btn-row">
+                                    <button class="btn primary grow" type="submit"><?= icon('cash', 20) ?>Naplaćeno — počinjem</button>
+                                    <a class="btn warn" href="<?= e(url('zastoj', ['item' => $it['id']])) ?>">Zastoj</a>
+                                </div>
+                            </form>
+                        <?php elseif ($canAct && $it['status'] === 'zastoj'): ?>
+                            <div class="btn-row">
+                                <form method="post" action="<?= e(url() . 'api/stavka.php') ?>" class="grow">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="action" value="resume">
+                                    <input type="hidden" name="item" value="<?= (int) $it['id'] ?>">
+                                    <button class="btn ghost block" type="submit">Nastavi rad</button>
+                                </form>
+                                <a class="btn primary" href="<?= e(url('zavrsi', ['item' => $it['id']])) ?>"><?= icon('camera', 20) ?>Završi</a>
+                            </div>
+                        <?php elseif ($canAct): ?>
+                            <div class="btn-row">
+                                <a class="btn primary grow" href="<?= e(url('zavrsi', ['item' => $it['id']])) ?>"><?= icon('camera', 20) ?>Završi + foto</a>
+                                <a class="btn warn" href="<?= e(url('zastoj', ['item' => $it['id']])) ?>">Zastoj</a>
+                            </div>
                         <?php endif; ?>
                     </div>
                 <?php else: ?>
@@ -133,13 +174,17 @@ $logLabels = [
                         <div>
                             <div class="tl-title"><?= e(ITEM_LABELS[$it['kind']]) ?></div>
                             <div class="mono muted small"><?= e($meta) ?></div>
+                            <?php if ($it['note'] && $it['status'] === 'zavrseno'): ?><div class="small muted tl-note"><?= e($it['note']) ?></div><?php endif; ?>
                         </div>
                         <div class="tl-files">
                             <?php foreach ($pdfs as $pdf): ?>
                                 <a class="chip" href="<?= e(file_url((int) $pdf['id'])) ?>" target="_blank" rel="noopener">Nalog <?= e(substr($p['code'], 5)) ?>.pdf</a>
                             <?php endforeach; ?>
                             <?php if ($photos): ?>
-                                <a class="chip" href="<?= e(file_url((int) $photos[0]['id'])) ?>" target="_blank" rel="noopener"><?= count($photos) ?> foto</a>
+                                <a class="chip" href="<?= e(url('galerija', ['id' => $p['id'], 'item' => $it['id']])) ?>"><?= count($photos) ?> foto</a>
+                            <?php endif; ?>
+                            <?php if ($canAct && $it['kind'] !== 'nalog'): ?>
+                                <a class="chip" href="<?= e(url('zavrsi', ['item' => $it['id']])) ?>">Završi</a>
                             <?php endif; ?>
                         </div>
                     </div>
