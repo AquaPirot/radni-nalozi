@@ -30,7 +30,7 @@ $showPay = can_see_payment($user);
 <?php foreach ($groups as $g): ?>
     <section class="group">
         <header class="group-head">
-            <span><?= e($g['title']) ?></span>
+            <span><?= e($g['title']) ?><?php if (!empty($g['sub'])): ?><small><?= e($g['sub']) ?></small><?php endif; ?></span>
             <?php if ($g['right'] !== ''): ?><span class="<?= $g['over'] ? 'warn' : '' ?>"><?= e($g['right']) ?></span><?php endif; ?>
         </header>
         <?php foreach ($g['items'] as $p):

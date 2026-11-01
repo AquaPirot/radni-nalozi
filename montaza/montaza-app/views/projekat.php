@@ -48,8 +48,8 @@ $logLabels = [
 
 <div class="facts">
     <div class="fact">
-        <span><?= $p['type'] === 'reklamacija' ? 'Nedelja servisa' : 'Nedelja' ?></span>
-        <strong class="mono"><?= $week ? (int) $week->format('W') . ' · ' . e($week->format('j') . '–' . $week->modify('+6 days')->format('j')) : '—' ?></strong>
+        <span><?= $p['type'] === 'reklamacija' ? 'Servis' : 'Montaža' ?></span>
+        <strong class="mono"><?= $week ? e(week_short($week)) : '—' ?></strong>
     </div>
     <div class="fact">
         <span>Krajnji rok</span>
@@ -110,7 +110,7 @@ $logLabels = [
             if ($it['status'] === 'zavrseno') {
                 $meta = fmt_dm(substr((string) $it['completed_at'], 0, 10)) . ' · ' . $resp . ($it['imported'] ? ' · UNETO' : '');
             } elseif ($it['kind'] === 'montaza' && $week) {
-                $meta = 'NED. ' . (int) $week->format('W') . ' · ' . $resp;
+                $meta = week_short($week) . ' · ' . $resp;
             } else {
                 $meta = ($it['due_date'] ? 'ROK ' . fmt_dm($it['due_date']) . ' · ' : '') . $resp;
             }

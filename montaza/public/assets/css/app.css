@@ -610,3 +610,5 @@ a.seg { display: inline-flex; align-items: center; justify-content: center; }
 .app { padding-top: env(safe-area-inset-top, 0px); }
 .auth-box { padding-top: calc(64px + env(safe-area-inset-top, 0px)); }
 .hero { margin-top: calc(-1 * env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px); box-sizing: content-box; }
+.group-head { align-items: flex-end; }
+.group-head small { display: block; margin-top: 4px; font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .1em; }

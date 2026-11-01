@@ -75,23 +75,41 @@ function week_monday(DateTimeInterface|string $d): DateTimeImmutable
     return $d->setTime(0, 0)->modify('monday this week');
 }
 
-/** "3–9. NOV" ili "29. SEP – 5. OKT" */
-function week_range_label(DateTimeImmutable $mon): string
+/** Radna nedelja: "pon 3.11. – pet 7.11." (umesto broja nedelje — svima jasnije). */
+function week_label(DateTimeInterface|string $mon, bool $upper = false): string
 {
-    $sun = $mon->modify('+6 days');
-    $m1 = (int) $mon->format('n');
-    $m2 = (int) $sun->format('n');
-    if ($m1 === $m2) {
-        return $mon->format('j') . '–' . $sun->format('j') . '. ' . MONTHS_SHORT[$m2];
-    }
-    return $mon->format('j') . '. ' . MONTHS_SHORT[$m1] . ' – ' . $sun->format('j') . '. ' . MONTHS_SHORT[$m2];
+    $mon = week_monday($mon);
+    $s = 'pon ' . $mon->format('j.n.') . ' – pet ' . $mon->modify('+4 days')->format('j.n.');
+    return $upper ? mb_strtoupper($s) : $s;
 }
 
-/** "Ned. 46 · 10–16.11" — za padajući meni */
+/** Kratko: "3.–7.11." ili "29.9.–3.10." */
+function week_short(DateTimeInterface|string $mon): string
+{
+    $mon = week_monday($mon);
+    $fri = $mon->modify('+4 days');
+    return ($mon->format('n') === $fri->format('n') ? $mon->format('j.') : $mon->format('j.n.')) . '–' . $fri->format('j.n.');
+}
+
+/** "ova nedelja" / "sledeća nedelja" / "za 2 nedelje" / "prošla nedelja" / "" */
+function week_relative(DateTimeInterface|string $mon): string
+{
+    $diff = (int) round((week_monday($mon)->getTimestamp() - week_monday(today())->getTimestamp()) / (7 * 86400));
+    return match (true) {
+        $diff === 0 => 'ova nedelja',
+        $diff === 1 => 'sledeća nedelja',
+        $diff === -1 => 'prošla nedelja',
+        $diff > 1 && $diff < 5 => "za $diff nedelje",
+        $diff >= 5 => "za $diff nedelja",
+        default => '',
+    };
+}
+
+/** Za padajući meni: "pon 10.11. – pet 14.11. (sledeća nedelja)" */
 function week_option_label(DateTimeImmutable $mon): string
 {
-    $sun = $mon->modify('+6 days');
-    return 'Ned. ' . (int) $mon->format('W') . ' · ' . $mon->format('j') . '–' . $sun->format('j.n');
+    $rel = week_relative($mon);
+    return week_label($mon) . ($rel !== '' ? " ($rel)" : '');
 }
 
 /** Opcije nedelja: tekuća + narednih $count-1; uključuje i $include ako je ranija. */

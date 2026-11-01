@@ -37,7 +37,7 @@ foreach ($rows as $r) {
 
 view('plan', [
     'title'       => 'Plan',
-    'eyebrow'     => 'NAREDNE 4 NEDELJE',
+    'eyebrow'     => 'NAREDNE 4 NEDELJE · PON–PET',
     'tab'         => 'plan',
     'user'        => $user,
     'capacity'    => $capacity,

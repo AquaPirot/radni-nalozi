@@ -11,6 +11,11 @@ $candidates = [
 ];
 foreach ($candidates as $c) {
     if (is_file($c)) {
+        // Još nije instalirano → čarobnjak za instalaciju
+        if (!is_file(dirname($c) . '/config.php') && is_file(__DIR__ . '/install.php') && basename($_SERVER['SCRIPT_NAME'] ?? '') !== 'install.php') {
+            header('Location: install.php');
+            exit;
+        }
         require $c;
         return;
     }

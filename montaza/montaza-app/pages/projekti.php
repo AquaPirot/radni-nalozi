@@ -59,8 +59,9 @@ foreach ($projects as $p) {
         $mon = new DateTimeImmutable($key);
         $n = $weekLoad[$key] ?? 0;
         $groups[$key] ??= [
-            'title' => 'NEDELJA ' . (int) $mon->format('W') . ' · ' . week_range_label($mon),
-            'right' => $n . ' / ' . $capacity . ' MONTAŽE',
+            'title' => week_label($mon, true),
+            'sub'   => mb_strtoupper(week_relative($mon)),
+            'right' => $n . ' / ' . $capacity,
             'over'  => $n > $capacity,
             'items' => [],
         ];

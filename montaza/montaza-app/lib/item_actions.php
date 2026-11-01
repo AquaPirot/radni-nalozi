@@ -163,7 +163,7 @@ function item_complete(int $itemId, array $user, array $in, ?array $posle, array
     // Obaveštenja (tačka 9)
     $ref = project_ref($project);
     if ($item['kind'] === 'pakovanje') {
-        $week = $project['install_week_start'] ? ', ned. ' . (int) (new DateTimeImmutable($project['install_week_start']))->format('W') : '';
+        $week = $project['install_week_start'] ? ', montaža ' . week_label($project['install_week_start']) : '';
         notify(['teren', 'vlasnik'], "Spremno za montažu: $ref$week", (int) $project['id']);
     } elseif ($item['kind'] === 'montaza' || $item['kind'] === 'servis') {
         notify(['vlasnik'], ITEM_LABELS[$item['kind']] . " završena: $ref", (int) $project['id']);

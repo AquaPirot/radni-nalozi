@@ -29,7 +29,7 @@ $capacity = (int) setting('weekly_capacity', '5');
 $itemsBy = load_items_for(array_column($week, 'id'));
 $stopBy = open_stoppages_for(array_column($week, 'id'));
 
-$base = 'PREGLED — nedelja ' . (int) $mon->format('W') . ' (' . week_range_label($mon) . ")\n\n";
+$base = 'PREGLED NEDELJE — ' . week_label($mon) . "\n\n";
 $base .= 'MONTAŽE OVE NEDELJE (' . count($week) . ' / ' . $capacity . "):\n";
 foreach ($week as $p) {
     [$line] = project_status_line($p, $itemsBy[$p['id']] ?? [], $stopBy[$p['id']] ?? null);

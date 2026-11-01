@@ -19,7 +19,7 @@ $row = function (array $p) use ($sub, $itemsBy, $stopBy): string {
         . '</a>';
 };
 ?>
-<div class="row-between plan-cap"><span></span><span class="eyebrow">KAPACITET <?= $capacity ?> / NED.</span></div>
+<div class="row-between plan-cap"><span></span><span class="eyebrow">KAPACITET <?= $capacity ?> MONTAŽA NEDELJNO</span></div>
 
 <?php if ($unscheduled): ?>
     <section class="unsched">
@@ -47,8 +47,8 @@ $row = function (array $p) use ($sub, $itemsBy, $stopBy): string {
     <section class="week">
         <div class="row-between">
             <div>
-                <div class="h2">Nedelja <?= (int) $w['mon']->format('W') ?></div>
-                <div class="mono small muted"><?= e(week_range_label($w['mon'])) ?></div>
+                <div class="h2"><?= e(week_label($w['mon'])) ?></div>
+                <div class="mono small muted"><?= e(mb_strtoupper(week_relative($w['mon']))) ?></div>
             </div>
             <span class="mono<?= $over ? ' warn' : '' ?>"><?= $n ?> / <?= $capacity ?></span>
         </div>

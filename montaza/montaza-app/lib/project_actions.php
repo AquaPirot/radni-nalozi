@@ -88,7 +88,7 @@ function create_project(array $in, array $user, ?array $lokacijaUpload, ?array $
     rule_maybe_complete_project($pid);
     notify(['hala', 'teren'], 'Novi projekat: ' . project_ref($in)
         . ' (' . mb_strtolower(TYPE_LABELS[$in['type']]) . ($in['has_steel'] ? ' + čelik' : '') . ')'
-        . ($in['install_week_start'] ? ' — ned. ' . (int) (new DateTimeImmutable($in['install_week_start']))->format('W') : ' — nije raspoređeno')
+        . ($in['install_week_start'] ? ' — montaža ' . week_label($in['install_week_start']) : ' — nije raspoređeno')
         . ($in['deadline'] ? ', rok ' . fmt_dm($in['deadline']) : ''), $pid);
     return $pid;
 }
@@ -267,6 +267,6 @@ function set_project_week(array $project, ?string $week, array $user): void
 function notify_week_scheduled(array $project, string $week): void
 {
     $mon = new DateTimeImmutable($week);
-    notify(['hala', 'teren'], 'Raspoređeno: ' . project_ref($project) . ' — ned. ' . (int) $mon->format('W') . ' (' . week_range_label($mon) . ')'
+    notify(['hala', 'teren'], 'Raspoređeno: ' . project_ref($project) . ' — montaža ' . week_label($mon)
         . ($project['deadline'] ? ', rok ' . fmt_dm($project['deadline']) : ''), (int) $project['id']);
 }

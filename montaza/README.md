@@ -4,12 +4,12 @@ PHP + MySQL aplikacija za praćenje projekata pergola. Kompletan opis je u [`doc
 
 ## Raspored foldera
 
-| Folder u repou | Gde ide na serveru |
+| Folder u repou | Na serveru |
 |---|---|
-| `public/` | document root subdomena, npr. `/public_html/montaza/` |
-| `montaza-app/` | **van** web root-a, pored `public_html` (npr. `/home/korisnik/montaza-app/`) |
+| `public/` | sadržaj foldera subdomena (document root) |
+| `montaza-app/` | `montaza-app/` unutar istog foldera — `.htaccess` (`Require all denied`) blokira pristup spolja |
 
-Ako hosting ne dozvoljava folder van `public_html`, stavi `montaza-app/` **unutar** document root-a. Tamošnji `.htaccess` (`Require all denied`) blokira svaki pristup spolja. `public/_init.php` sam pronalazi folder na jednom od ta dva mesta.
+`build-zip.sh` spaja oba u jedan ZIP koji se raspakuje direktno u folder subdomena; `install.php` zatim pravi `config.php`, tabele i naloge. `_init.php` pronalazi `montaza-app/` i ako je premešten van web root-a.
 
 ## Status
 

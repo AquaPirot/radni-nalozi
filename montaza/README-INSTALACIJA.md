@@ -1,94 +1,66 @@
 # Montaža — instalacija na cPanel (montaza.aggroup.rs)
 
-Uputstvo za postavljanje aplikacije na hosting. Ne treba ništa da se programira, samo da se prate koraci redom. Za sve treba otprilike 20–30 minuta.
-
-U ZIP fajlu su dva foldera:
-
-| Folder iz ZIP-a | Šta je | Gde ide |
-|---|---|---|
-| `public/` | ono što se vidi na sajtu | u folder subdomena (document root) |
-| `montaza-app/` | kod, podešavanja i baza | **jedan nivo iznad**, da se ne vidi spolja |
+Ukupno 10–15 minuta. Ne treba ništa da se programira, ni da se dira phpMyAdmin.
 
 ---
 
-## 1. Subdomen i HTTPS
+## 1. Subdomen i HTTPS (cPanel)
 
-1. cPanel → **Domains** (ili **Subdomains**) → napravi `montaza.aggroup.rs`.
-   - Zapiši koji je **Document Root**, na primer `/home/KORISNIK/montaza.aggroup.rs` ili `/home/KORISNIK/public_html/montaza`.
-2. cPanel → **SSL/TLS Status** → označi `montaza.aggroup.rs` → **Run AutoSSL**.
+1. **Domains** (ili **Subdomains**) → napravi `montaza.aggroup.rs`. Zapamti njegov folder (**Document Root**), npr. `/home/KORISNIK/montaza.aggroup.rs`.
+2. **SSL/TLS Status** → označi `montaza.aggroup.rs` → **Run AutoSSL**.
    HTTPS je obavezan: bez njega kamera na telefonu i „Dodaj na početni ekran" ne rade.
 
-## 2. Baza
+## 2. Prazna baza (cPanel → MySQL Databases)
 
-1. cPanel → **MySQL Databases**:
-   - napravi bazu, na primer `KORISNIK_montaza`;
-   - napravi korisnika sa jakom lozinkom (dugme „Password Generator") i zapiši lozinku;
-   - dodaj korisnika na bazu sa **ALL PRIVILEGES**.
-2. cPanel → **phpMyAdmin** → levo izaberi novu bazu → **Import** → izaberi `montaza-app/schema.sql` iz ZIP-a → **Import** (Go).
-   Pojaviće se tabele `users`, `projects`, `tasks`…
+1. **Create New Database** → npr. `montaza`. cPanel doda prefiks, pa se zove npr. `KORISNIK_montaza`.
+2. **Add New User** → npr. `mz` (biće `KORISNIK_mz`) → lozinka preko **Password Generator**. **Zapiši je.**
+3. **Add User To Database** → izaberi tog korisnika i bazu → **ALL PRIVILEGES** → Make Changes.
 
-## 3. Fajlovi
+## 3. ZIP (cPanel → File Manager)
 
-1. cPanel → **File Manager** → otvori svoj početni folder (`/home/KORISNIK`) → **Upload** → ZIP → **Extract**.
-2. Sadržaj foldera `public/` prebaci u **Document Root** subdomena iz koraka 1. Prebacuju se i skriveni fajlovi `.htaccess` i `.user.ini`: u File Manageru uključi *Settings → Show Hidden Files*.
-3. Folder `montaza-app/` ostavi u `/home/KORISNIK/`, pored `public_html`. Aplikacija ga sama pronalazi:
-   - ako je Document Root `/home/KORISNIK/montaza.aggroup.rs` → `montaza-app` ide u `/home/KORISNIK/montaza-app`;
-   - ako je Document Root `/home/KORISNIK/public_html/montaza` → `montaza-app` takođe ide u `/home/KORISNIK/montaza-app`.
+1. Otvori folder subdomena iz koraka 1.
+2. **Upload** → `montaza-YYYYMMDD.zip`.
+3. Desni klik na ZIP → **Extract** → u isti folder.
+4. Obriši ZIP.
 
-   Ako hosting baš ne dozvoljava folder van `public_html`, stavi `montaza-app/` **unutar** Document Root-a. Njegov `.htaccess` blokira svaki pristup spolja.
+## 4. Instalacija (u browseru)
 
-## 4. config.php
+Otvori **https://montaza.aggroup.rs**. Sam te prebaci na instalaciju:
 
-U `montaza-app/` kopiraj `config.php.example` u **`config.php`** i popuni:
+1. **Korak 1 — baza:** upiši ime baze, korisnika i lozinku iz koraka 2 → **Poveži i napravi tabele**.
+   Ako nešto ne valja, piše tačno šta (pogrešna lozinka, baza ne postoji…).
+2. **Korak 2 — nalozi:** imena su već upisana (Aleksandar, Oliver, Steva). Svako upiše **svoju lozinku** od 4 cifre → **Napravi naloge**.
+3. Na kraju instalacija:
+   - sama obriše `install.php`;
+   - ispiše komandu za ponedeljni pregled (korak 7). Kopiraj je.
 
-```php
-'db' => [
-    'host' => 'localhost',
-    'name' => 'KORISNIK_montaza',     // iz koraka 2
-    'user' => 'KORISNIK_montaza',     // iz koraka 2
-    'pass' => 'lozinka iz koraka 2',
-],
-'base_url' => 'https://montaza.aggroup.rs',
-'env'      => 'production',
-```
+Uradi korak 4 odmah posle raspakivanja: dok instalacija nije završena, `install.php` može da otvori bilo ko.
 
-## 5. Nalozi (Aleksandar, Oliver, Steva)
+## 5. Telefoni
 
-1. Otvori **https://montaza.aggroup.rs/install.php**.
-2. Popuni tri naloga:
-
-   | Uloga | Ime | Korisničko ime |
-   |---|---|---|
-   | Vlasnik | Aleksandar | `aleksandar` |
-   | Hala (šef proizvodnje) | Oliver | `oliver` |
-   | Teren (šef terenske ekipe) | Steva | `steva` |
-
-   Lozinke (4 cifre) svako kuca **sam** i ne zapisuju se nigde drugde.
-3. Klikni **Napravi naloge**, pa **obriši `install.php`** sa servera (File Manager → Delete). Bez njega niko ne može ponovo da pravi naloge.
+Svako na svom telefonu:
+1. Otvori **https://montaza.aggroup.rs** i prijavi se. „Zapamti me" drži prijavu 30 dana.
+2. Dodaj aplikaciju na početni ekran:
+   - **Android (Chrome):** meni ⋮ → **Dodaj na početni ekran** / **Instaliraj aplikaciju**;
+   - **iPhone (Safari):** dugme Deli (□↑) → **Add to Home Screen**.
 
 Zaštita kratkih lozinki:
 - posle 5 pogrešnih pokušaja nalog je zaključan 15 minuta;
 - posle 20 pogrešnih pokušaja u toku dana zaključan je 24 sata, a Aleksandar dobija poruku;
 - Aleksandar može ranije da otključa nalog: **Podešavanja → korisnik → Otključaj nalog**.
 
-## 6. Telefoni
+## 6. Telegram obaveštenja
 
-Svako na svom telefonu:
-1. Otvori **https://montaza.aggroup.rs** u Chrome-u (Android) ili Safari-ju (iPhone) i prijavi se. „Zapamti me" drži prijavu 30 dana.
-2. Dodaj aplikaciju na početni ekran:
-   - **Android:** meni ⋮ → **Dodaj na početni ekran** / **Instaliraj aplikaciju**;
-   - **iPhone:** dugme Deli (□↑) → **Add to Home Screen**.
+Na telefonu treba samo aplikacija **Telegram**. Ništa drugo se ne instalira.
 
-## 7. Telegram obaveštenja (preporučeno)
-
-1. Na Telegramu otvori **@BotFather** → `/newbot` → ime npr. „AG Montaža" → dobićeš **token** (`123456789:ABC…`).
-   Preporuka je **novi bot samo za Montažu**. Ako postojeći bot za upite koristi webhook, ne može da se koristi i ovde.
-2. U aplikaciji: **Podešavanja → Telegram** → nalepi token → **Sačuvaj podešavanja**.
-3. Aleksandar, Oliver i Steva na Telegramu pronađu bota i pošalju mu bilo koju poruku, npr. „start".
-4. **Podešavanja → Pronađi chat ID** → prikazaće se imena i brojevi. Upiši broj svakom korisniku (otvori korisnika → *Telegram chat ID* → Sačuvaj) i klikni **Pošalji test poruku**.
+1. Aleksandar: u Telegramu otvori **@BotFather** → `/newbot` → ime npr. „AG Montaža" → dobiješ **token** (`123456789:ABC…`).
+   Napravi **novi** bot samo za Montažu. Bot za upite koji već koristiš verovatno ne može da se deli.
+2. U aplikaciji Montaža: **Podešavanja → Telegram** → nalepi token → **Sačuvaj podešavanja**.
+3. Aleksandar, Oliver i Steva u Telegramu pronađu bota (po imenu iz koraka 1) i pritisnu **Start**, odnosno pošalju bilo koju poruku.
+4. **Podešavanja → Pronađi chat ID** → pojave se imena i brojevi. Upiši broj svakom korisniku (otvori korisnika → *Telegram chat ID* → Sačuvaj) → **Pošalji test poruku**.
 
 Ko šta dobija:
-- **Oliver i Steva:** novi projekat i raspoređivanje u nedelju.
+- **Oliver i Steva:** novi projekat i raspoređivanje („montaža pon 10.11. – pet 14.11.").
 - **Steva:** „Spremno za montažu" kad Oliver zatvori pakovanje.
 - **Aleksandar:**
   - gotove stavke u hali;
@@ -97,14 +69,14 @@ Ko šta dobija:
   - završena montaža.
 - **Za zadatke:** kome je zadatak dat dobija poruku kad ga dobije, a ko ga je zadao kad je završen ili kad ima zastoj.
 
-## 8. Ponedeljni pregled (cron)
+## 7. Ponedeljni pregled (cPanel → Cron Jobs)
 
-cPanel → **Cron Jobs** → *Add New Cron Job*:
-- Common Settings: **Once Per Week**, ili ručno: minut `0`, sat `7`, dan u nedelji `1` (ponedeljak);
-- Command (zameni `KORISNIK`):
+**Add New Cron Job**:
+- Minute `0`, Hour `7`, Day `*`, Month `*`, Weekday `1` (ponedeljak);
+- Command: komanda koju je ispisala instalacija, npr.:
 
 ```
-/usr/local/bin/php /home/KORISNIK/montaza-app/cron/nedeljni-pregled.php
+/usr/local/bin/php /home/KORISNIK/montaza.aggroup.rs/montaza-app/cron/nedeljni-pregled.php
 ```
 
 Svako ponedeljkom u 7:00 dobije poruku sa ovim:
@@ -113,23 +85,20 @@ Svako ponedeljkom u 7:00 dobije poruku sa ovim:
 - otvoreni zastoji;
 - njegovi zadaci.
 
-Da proveriš šta će poslati bez slanja, u cPanel **Terminal**-u pokreni:
-`php ~/montaza-app/cron/nedeljni-pregled.php --dry-run`
-
 ---
 
 ## Česti problemi
 
 | Problem | Rešenje |
 |---|---|
-| „Nedostaje config.php" | Korak 4 — `config.php` mora biti u `montaza-app/`. |
-| „Ne mogu da pronađem folder montaza-app" | `montaza-app/` nije na mestu iz koraka 3. |
-| „Došlo je do greške" | Pogledaj `montaza-app/logs/app.log`. Najčešće je pogrešan podatak za bazu u `config.php`. |
-| Slika ili PDF „prevelik" | `.user.ini` mora biti u Document Root-u. Proveri i cPanel → **MultiPHP INI Editor**: `upload_max_filesize` ≥ 20M, `post_max_size` ≥ 64M. |
+| Instalacija: „Pogrešan korisnik ili lozinka" | Korak 2.3 — korisnik mora biti dodat na bazu sa ALL PRIVILEGES. |
+| Instalacija: „Baza ne postoji" | Upiši puno ime sa prefiksom, npr. `KORISNIK_montaza`. |
+| Instalacija: „server ne dozvoljava upis fajla" | Uradi ono što piše na ekranu: napravi `montaza-app/config.php` sa prikazanim tekstom. |
+| „Došlo je do greške" | Pogledaj `montaza-app/logs/app.log` u File Manager-u. |
+| Slika ili PDF „prevelik" | cPanel → **MultiPHP INI Editor**: `upload_max_filesize` ≥ 20M, `post_max_size` ≥ 64M. |
 | Kamera se ne otvara | Sajt mora biti na **https://** (korak 1, AutoSSL). |
 | Zaboravljena lozinka | Aleksandar: **Podešavanja → korisnik → Nova lozinka**. |
-| Aleksandar zaboravio lozinku | phpMyAdmin → tabela `users` → red `aleksandar` → u polje `password_hash` nalepi rezultat iz cPanel Terminala: `php -r 'echo password_hash("NOVA", PASSWORD_DEFAULT);'` |
+| Aleksandar zaboravio svoju lozinku | cPanel **Terminal**: `php -r 'echo password_hash("NOVA", PASSWORD_DEFAULT);'` → phpMyAdmin → tabela `users` → red `aleksandar` → nalepi u `password_hash`. |
+| Ponovna instalacija od nule | Obriši `montaza-app/config.php` i sve tabele u bazi, pa ponovo otpakuj ZIP. |
 
-**Rezervna kopija:** cPanel → **Backup** → preuzmi bazu (MySQL) i folder `uploads/` iz Document Root-a, makar jednom mesečno.
-
-Tehnički opis aplikacije je u `docs/SPEC-montaza.md` u repozitorijumu.
+**Rezervna kopija:** cPanel → **Backup** → preuzmi bazu (MySQL) i folder `uploads/`, makar jednom mesečno.
