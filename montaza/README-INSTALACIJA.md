@@ -94,6 +94,16 @@ Svako ponedeljkom u 7:00 dobije obaveštenje na telefonu i, ako ima Telegram, de
 
 ---
 
+## Pregaziti staru aplikaciju na istom subdomenu i u istoj bazi
+
+1. *(preporuka)* phpMyAdmin → stara baza → **Export** → **Go**, za svaki slučaj.
+2. Zapiši korisnika i lozinku baze. Stara aplikacija ih obično drži u `.env` (`DB_USERNAME`, `DB_PASSWORD`). Ako ih nemaš: MySQL Databases → novi korisnik → *Add User To Database* → ALL PRIVILEGES.
+3. File Manager → folder subdomena → *Settings → Show Hidden Files* → **Izaberi sve** → skini štiklu sa `.well-known` → **Obriši**.
+4. **Otpremi** ZIP → **Izdvoji** → obriši ZIP.
+5. **Domeni** → subdomen → **Upravljaj** → *Koren dokumenta* neka bude sam folder subdomena (npr. `montaza.aggroup.rs`, bez `/…/public`).
+6. phpMyAdmin → levo **klikni bazu** → **Import** → `montaza-baza.sql` → **Go**. Ovo briše sve stare tabele u **toj** bazi i pravi nove.
+7. Otvori sajt → instalacija (korak 4 gore).
+
 ## Česti problemi
 
 | Problem | Rešenje |
