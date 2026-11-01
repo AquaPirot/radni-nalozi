@@ -101,6 +101,7 @@ function icon(string $name, int $size = 22): string
         'image'    => '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5L5 20"/>',
         'back'     => '<path d="m15 18-6-6 6-6"/>',
         'video'    => '<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-4v12l-6-4"/>',
+        'download' => '<path d="M12 4v12M6 11l6 6 6-6M4 20h16"/>',
         'close'    => '<path d="M18 6 6 18M6 6l12 12"/>',
         'chevron'  => '<path d="m9 18 6-6-6-6"/>',
         'edit'     => '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',

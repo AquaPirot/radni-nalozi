@@ -1,8 +1,6 @@
 <?php
 declare(strict_types=1);
 
-const MONTHS_FULL = [1 => 'Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun', 'Jul', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar'];
-
 $isOwner = $user['role'] === 'vlasnik';
 $filters = $isOwner ? ['aktivni', 'reklamacije', 'zavrseno'] : ['aktivni', 'reklamacije'];
 $f = in_array($_GET['f'] ?? '', $filters, true) ? $_GET['f'] : 'aktivni';

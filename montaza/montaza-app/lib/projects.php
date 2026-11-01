@@ -33,6 +33,7 @@ const PAYMENT_LABELS = [
     'ne'    => 'Ne naplaćuje',
 ];
 
+const MONTHS_FULL = [1 => 'Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun', 'Jul', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar'];
 const MONTHS_SHORT = [1 => 'JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AVG', 'SEP', 'OKT', 'NOV', 'DEC'];
 
 // ── Šabloni stavki (tačka 4 speca) ──────────────────────────
