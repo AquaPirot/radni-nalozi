@@ -223,3 +223,31 @@ function csrf_check(): void
         exit('Sesija je istekla. Osveži stranicu i pokušaj ponovo.');
     }
 }
+
+// ── Jednokratni token (zaštita od duplog slanja forme) ──────
+
+function once_field(): string
+{
+    return '<input type="hidden" name="_once" value="' . bin2hex(random_bytes(12)) . '">';
+}
+
+/** false ako je ista forma već poslata (dupli pritisak / ponovno slanje posle slabe veze). */
+function once_check(): bool
+{
+    $t = (string) ($_POST['_once'] ?? '');
+    if ($t === '') {
+        return true;
+    }
+    $used = $_SESSION['once_used'] ?? [];
+    if (isset($used[$t])) {
+        flash('ok', 'Već je sačuvano.');
+        return false;
+    }
+    $used[$t] = time();
+    if (count($used) > 300) {
+        asort($used);
+        $used = array_slice($used, -200, null, true);
+    }
+    $_SESSION['once_used'] = $used;
+    return true;
+}

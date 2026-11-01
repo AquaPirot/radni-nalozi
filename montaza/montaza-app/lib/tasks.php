@@ -82,16 +82,22 @@ function task_status_line(array $t): array
     }
     $late = days_late($t['due_date']);
     if ($late > 0) {
-        return ['Kasni ' . $late . ' ' . ($late === 1 ? 'dan' : 'dana'), 'warn'];
+        return ['Kasni ' . $late . ' ' . ($late === 1 ? 'dan' : 'dana') . (empty($t['accepted_at']) ? ' · nije preuzet' : ''), 'warn'];
     }
-    return [$t['status'] === 'u_toku' ? 'U toku' : 'Čeka', $t['status'] === 'u_toku' ? 'live' : 'idle'];
+    if ($t['status'] === 'u_toku') {
+        return ['U radu', 'live'];
+    }
+    return [empty($t['accepted_at']) ? 'Dodeljen · nije preuzet' : 'Preuzet', empty($t['accepted_at']) ? 'idle' : 'live'];
 }
 
 function task_input(array $post): array
 {
     $due = trim((string) ($post['due_date'] ?? ''));
     $d = DateTimeImmutable::createFromFormat('!Y-m-d', $due);
+    $time = trim((string) ($post['due_time'] ?? ''));
     return [
+        'no_deadline'    => !empty($post['no_deadline']),
+        'due_time'       => preg_match('/^\d{2}:\d{2}$/', $time) ? $time . ':00' : null,
         'title'          => trim((string) ($post['title'] ?? '')),
         'description'    => trim((string) ($post['description'] ?? '')),
         'assigned_to'    => (int) ($post['assigned_to'] ?? 0),
@@ -116,6 +122,8 @@ function task_validate(array $in, array $user): array
     }
     if ($in['due_raw'] !== '' && $in['due_date'] === null) {
         $err['due_date'] = 'Neispravan datum.';
+    } elseif ($in['due_date'] === null && !$in['no_deadline']) {
+        $err['due_date'] = 'Izaberi rok ili označi „Bez roka".';
     }
     if ($in['project_id'] && !load_project($in['project_id'])) {
         $err['project_id'] = 'Projekat ne postoji.';
@@ -126,10 +134,11 @@ function task_validate(array $in, array $user): array
 function task_create(array $in, array $user): int
 {
     q(
-        'INSERT INTO tasks (title, description, assigned_to, created_by, project_id, due_date, priority, requires_photo)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO tasks (title, description, assigned_to, created_by, project_id, due_date, due_time, no_deadline, priority, requires_photo, accepted_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [$in['title'], $in['description'] ?: null, $in['assigned_to'], $user['id'], $in['project_id'],
-         $in['due_date'], $in['priority'], (int) $in['requires_photo']]
+         $in['due_date'], $in['due_date'] ? $in['due_time'] : null, (int) ($in['due_date'] === null), $in['priority'], (int) $in['requires_photo'],
+         $in['assigned_to'] === (int) $user['id'] ? date('Y-m-d H:i:s') : null]
     );
     $id = (int) db()->lastInsertId();
     log_activity('task_created', $in['project_id'], null, ['task_id' => $id, 'title' => $in['title'], 'assigned_to' => $in['assigned_to']]);
@@ -143,11 +152,13 @@ function task_create(array $in, array $user): int
 function task_update(array $task, array $in, array $user): void
 {
     q(
-        'UPDATE tasks SET title = ?, description = ?, assigned_to = ?, project_id = ?, due_date = ?, priority = ?, requires_photo = ? WHERE id = ?',
-        [$in['title'], $in['description'] ?: null, $in['assigned_to'], $in['project_id'], $in['due_date'],
-         $in['priority'], (int) $in['requires_photo'], $task['id']]
+        'UPDATE tasks SET title = ?, description = ?, assigned_to = ?, project_id = ?, due_date = ?, due_time = ?, no_deadline = ?, priority = ?, requires_photo = ?,
+            accepted_at = IF(assigned_to = ?, accepted_at, NULL) WHERE id = ?',
+        [$in['title'], $in['description'] ?: null, $in['assigned_to'], $in['project_id'], $in['due_date'], $in['due_date'] ? $in['due_time'] : null,
+         (int) ($in['due_date'] === null), $in['priority'], (int) $in['requires_photo'], $in['assigned_to'], $task['id']]
     );
     log_activity('task_updated', $in['project_id'], null, ['task_id' => (int) $task['id']]);
+    task_comment((int) $task['id'], $user, 'sistem', 'Izmenjen zadatak' . ((string) $task['due_date'] !== (string) $in['due_date'] ? ' — rok: ' . ($in['due_date'] ? fmt_date($in['due_date']) : 'bez roka') : ''));
     if ($in['assigned_to'] !== (int) $task['assigned_to'] && $in['assigned_to'] !== (int) $user['id']) {
         notify_user($in['assigned_to'], 'Dodeljen ti je zadatak: ' . $in['title'], url('zadatak', ['id' => $task['id']]));
     }
@@ -181,7 +192,7 @@ function task_start(int $id, array $user): void
             throw new RuleError('Nemaš pravo ili je zadatak već završen.');
         }
         $resume = $t['status'] === 'zastoj';
-        q("UPDATE tasks SET status = 'u_toku', started_at = COALESCE(started_at, NOW()) WHERE id = ?", [$id]);
+        q("UPDATE tasks SET status = 'u_toku', started_at = COALESCE(started_at, NOW()), accepted_at = COALESCE(accepted_at, NOW()) WHERE id = ?", [$id]);
         if ($resume) {
             q('UPDATE stoppages SET resolved_at = NOW(), resolved_by = ? WHERE task_id = ? AND resolved_at IS NULL', [$user['id'], $id]);
         }
@@ -193,44 +204,30 @@ function task_start(int $id, array $user): void
     }
 }
 
-/** Završetak zadatka; slika je obavezna samo ako je zadatak tako zadat. */
-function task_complete(int $id, array $user, string $note, array $fotos): void
+/** Završetak zadatka; slika je obavezna samo ako je zadatak tako zadat. $fotoIds: već poslate slike. */
+function task_complete(int $id, array $user, string $note, array $fotoIds): void
 {
-    $stored = [];
+    db()->beginTransaction();
     try {
-        foreach ($fotos as $f) {
-            $stored[] = store_image($f);
-        }
-        db()->beginTransaction();
         $t = lock_task($id);
         if (!can_act_task($user, $t)) {
             throw new RuleError('Nemaš pravo ili je zadatak već završen.');
         }
-        $have = (int) q_val('SELECT COUNT(*) FROM files WHERE task_id = ?', [$id]) + count($stored);
+        attach_temp_files($fotoIds, $t['project_id'] ? (int) $t['project_id'] : null, ['task_id' => $id, 'kind' => 'foto'], (int) $user['id']);
+        $have = (int) q_val('SELECT COUNT(*) FROM files WHERE task_id = ?', [$id]);
         if ($t['requires_photo'] && $have < 1) {
             throw new RuleError('Za ovaj zadatak je potrebna slika.', ['slika']);
         }
-        foreach ($stored as $s) {
-            q(
-                "INSERT INTO files (project_id, task_id, kind, path, thumb_path, mime, width, height, size, uploaded_by)
-                 VALUES (?, ?, 'foto', ?, ?, ?, ?, ?, ?, ?)",
-                [$t['project_id'], $id, $s['path'], $s['thumb_path'], $s['mime'], $s['width'], $s['height'], $s['size'], $user['id']]
-            );
-        }
-        q(
-            "UPDATE tasks SET status = 'zavrseno', started_at = COALESCE(started_at, created_at), completed_at = NOW(),
-                completed_by = ?, note = ? WHERE id = ?",
-            [$user['id'], $note !== '' ? mb_substr($note, 0, 2000) : null, $id]
-        );
+        q("UPDATE tasks SET status = 'zavrseno', accepted_at = COALESCE(accepted_at, NOW()), started_at = COALESCE(started_at, created_at),
+              completed_at = NOW(), completed_by = ?, note = ? WHERE id = ?",
+            [$user['id'], $note !== '' ? mb_substr($note, 0, 2000) : null, $id]);
         q('UPDATE stoppages SET resolved_at = NOW(), resolved_by = ? WHERE task_id = ? AND resolved_at IS NULL', [$user['id'], $id]);
-        log_activity('task_completed', $t['project_id'] ? (int) $t['project_id'] : null, null, ['task_id' => $id, 'photos' => count($stored)]);
+        task_comment($id, $user, 'sistem', 'Završeno' . ($note !== '' ? ": $note" : ''));
+        log_activity('task_completed', $t['project_id'] ? (int) $t['project_id'] : null, null, ['task_id' => $id, 'photos' => count($fotoIds)]);
         db()->commit();
     } catch (Throwable $ex) {
         if (db()->inTransaction()) {
             db()->rollBack();
-        }
-        foreach ($stored as $s) {
-            delete_stored($s);
         }
         throw $ex;
     }
@@ -239,33 +236,62 @@ function task_complete(int $id, array $user, string $note, array $fotos): void
     }
 }
 
-function task_stoppage(int $id, array $user, string $reason, string $note): void
+/** Onaj kome je dodeljen potvrđuje da je preuzeo zadatak. */
+function task_accept(int $id, array $user): void
 {
-    if (!isset(REASON_LABELS[$reason])) {
-        throw new RuleError('Izaberi razlog zastoja.');
+    $t = load_task($id);
+    if (!$t || (int) $t['assigned_to'] !== (int) $user['id'] || $t['status'] === 'zavrseno') {
+        throw new RuleError('Zadatak može da preuzme samo onaj kome je dodeljen.');
     }
-    db()->beginTransaction();
-    try {
-        $t = lock_task($id);
-        if (!can_act_task($user, $t) || $t['status'] === 'zastoj') {
-            throw new RuleError('Zastoj nije moguće prijaviti.');
-        }
-        q("UPDATE tasks SET status = 'zastoj' WHERE id = ?", [$id]);
-        q(
-            'INSERT INTO stoppages (project_id, task_id, reason, note, created_by) VALUES (?, ?, ?, ?, ?)',
-            [$t['project_id'], $id, $reason, $note !== '' ? mb_substr($note, 0, 500) : null, $user['id']]
-        );
-        log_activity('task_stoppage', $t['project_id'] ? (int) $t['project_id'] : null, null, ['task_id' => $id, 'reason' => $reason, 'note' => $note]);
-        db()->commit();
-    } catch (Throwable $ex) {
-        db()->rollBack();
-        throw $ex;
+    if ($t['accepted_at']) {
+        return;
     }
-    $owners = array_map('intval', array_column(q_all("SELECT id FROM users WHERE role = 'vlasnik' AND active = 1"), 'id'));
-    $to = array_unique(array_filter([(int) $t['created_by'], ...$owners]));
-    foreach ($to as $uid) {
-        if ($uid !== (int) $user['id']) {
-            notify_user($uid, 'ZASTOJ na zadatku „' . $t['title'] . '" — ' . REASON_LABELS[$reason] . ($note !== '' ? " ($note)" : '') . ' · ' . $user['name'], url('zadatak', ['id' => $id]));
-        }
+    q('UPDATE tasks SET accepted_at = NOW() WHERE id = ?', [$id]);
+    task_comment($id, $user, 'sistem', 'Preuzeo zadatak');
+    if ($t['created_by'] && (int) $t['created_by'] !== (int) $user['id']) {
+        notify_user((int) $t['created_by'], $user['name'] . ' je preuzeo: ' . $t['title'], url('zadatak', ['id' => $id]));
     }
+}
+
+/** Ponovno otvaranje završenog zadatka (onaj ko je zadao ili vlasnik) — razlog je obavezan. */
+function task_reopen(int $id, array $user, string $reason): void
+{
+    $t = load_task($id);
+    if (!$t || $t['status'] !== 'zavrseno' || !can_edit_task($user, $t)) {
+        throw new RuleError('Zadatak ne može da se ponovo otvori.');
+    }
+    if (trim($reason) === '') {
+        throw new RuleError('Upiši razlog ponovnog otvaranja.');
+    }
+    q("UPDATE tasks SET status = 'ceka', completed_at = NULL, completed_by = NULL, accepted_at = NULL WHERE id = ?", [$id]);
+    task_comment($id, $user, 'ponovo_otvoren', trim($reason));
+    log_activity('task_reopened', $t['project_id'] ? (int) $t['project_id'] : null, null, ['task_id' => $id, 'reason' => $reason]);
+    if ((int) $t['assigned_to'] !== (int) $user['id']) {
+        notify_user((int) $t['assigned_to'], 'Ponovo otvoren zadatak: ' . $t['title'] . ' — ' . trim($reason), url('zadatak', ['id' => $id]));
+    }
+}
+
+/** Komentar (sa opcionom slikom) ili sistemski zapis istorije. */
+function task_comment(int $taskId, array $user, string $kind, string $body, ?int $fileId = null): void
+{
+    if ($fileId) {
+        attach_temp_files([$fileId], null, ['task_id' => $taskId, 'kind' => 'foto'], (int) $user['id']);
+    }
+    q('INSERT INTO task_comments (task_id, user_id, kind, body, file_id) VALUES (?, ?, ?, ?, ?)',
+        [$taskId, $user['id'], $kind, mb_substr($body, 0, 2000), $fileId]);
+}
+
+function task_comments(int $taskId): array
+{
+    return q_all('SELECT c.*, u.name AS user_name FROM task_comments c LEFT JOIN users u ON u.id = c.user_id WHERE c.task_id = ? ORDER BY c.created_at, c.id', [$taskId]);
+}
+
+function task_stoppage(int $id, array $user, array $in): void
+{
+    $t = load_task($id);
+    if (!$t || !can_act_task($user, $t) || $t['status'] === 'zastoj') {
+        throw new RuleError('Zastoj nije moguće prijaviti.');
+    }
+    stoppage_open(['task_id' => $id, 'project_id' => null], $in, $user);
+    task_comment($id, $user, 'sistem', 'Zastoj: ' . $in['note']);
 }

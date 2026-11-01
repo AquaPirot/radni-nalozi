@@ -104,6 +104,11 @@ function icon(string $name, int $size = 22): string
         'download' => '<path d="M12 4v12M6 11l6 6 6-6M4 20h16"/>',
         'bell'     => '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
         'home'     => '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+        'nav'      => '<path d="m3 11 19-9-9 19-2-8z"/>',
+        'users'    => '<circle cx="9" cy="8" r="3.5"/><path d="M2 20a7 7 0 0 1 14 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M22 20a7 7 0 0 0-4-6.3"/>',
+        'play'     => '<path d="M7 4v16l13-8z"/>',
+        'sun'      => '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+        'moon'     => '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
         'close'    => '<path d="M18 6 6 18M6 6l12 12"/>',
         'chevron'  => '<path d="m9 18 6-6-6-6"/>',
         'edit'     => '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
@@ -119,3 +124,83 @@ const ROLE_LABELS = [
     'hala'    => 'Hala',
     'teren'   => 'Teren',
 ];
+
+/** Trenutna adresa (za povratak posle akcije), samo putanja + upit. */
+function here(): string
+{
+    return (string) ($_SERVER['REQUEST_URI'] ?? '/');
+}
+
+/**
+ * Dugme koje šalje akciju na api/akcija.php i vraća se na istu stranu.
+ * $fields: dodatna skrivena polja; $confirm: tekst potvrde (opciono).
+ */
+function action_button(string $action, int $id, string $label, string $class = 'btn ghost', array $fields = [], ?string $confirm = null, string $icon = ''): string
+{
+    $h = '<form method="post" action="' . e(url() . 'api/akcija.php') . '" class="inline-form"' . ($confirm ? ' data-confirm="' . e($confirm) . '"' : '') . '>'
+        . csrf_field() . once_field()
+        . '<input type="hidden" name="action" value="' . e($action) . '">'
+        . '<input type="hidden" name="id" value="' . $id . '">'
+        . '<input type="hidden" name="back" value="' . e(here()) . '">';
+    foreach ($fields as $k => $v) {
+        $h .= '<input type="hidden" name="' . e($k) . '" value="' . e($v) . '">';
+    }
+    return $h . '<button class="' . e($class) . '" type="submit">' . ($icon ? icon($icon, 18) : '') . e($label) . '</button></form>';
+}
+
+/** Polje za slanje slika/PDF-a jedna po jedna (JS: data-uploader). */
+function uploader(string $name, string $label, bool $multiple = true, string $type = 'foto', bool $required = false, string $hint = '', ?array $ids = null): string
+{
+    // Fajlovi već poslati u prethodnom pokušaju (forma vraćena zbog greške) ostaju prikazani
+    $ids ??= is_post() ? posted_ids($name) : [];
+    $list = '';
+    foreach ($ids as $id) {
+        $list .= '<span class="up-item ok"><input type="hidden" name="' . e($name) . '[]" value="' . (int) $id . '">'
+            . ($type === 'pdf' ? '<span class="up-pdf">PDF</span>' : '<img src="' . e(file_url((int) $id, true)) . '" alt="">')
+            . '<button type="button" class="up-x" aria-label="Ukloni">×</button></span>';
+    }
+    return '<div class="uploader" data-uploader data-name="' . e($name) . '" data-type="' . e($type) . '"' . ($multiple ? ' data-multiple' : '') . ($required ? ' data-required' : '') . '>'
+        . '<div class="up-head"><span>' . e($label) . ($required ? ' <span class="warn">*</span>' : '') . '</span>' . ($hint ? '<span class="small muted">' . e($hint) . '</span>' : '') . '</div>'
+        . '<div class="up-list">' . $list . '</div>'
+        . '<label class="up-add">' . icon($type === 'pdf' ? 'file' : 'camera', 22)
+        . '<span>' . ($type === 'pdf' ? 'Izaberi PDF' : ($multiple ? 'Kamera ili galerija' : 'Slikaj ili izaberi')) . '</span>'
+        . '<input type="file" accept="' . ($type === 'pdf' ? 'application/pdf,.pdf' : 'image/*') . '"' . ($multiple ? ' multiple' : '') . '></label>'
+        . '</div>';
+}
+
+/** Čitljiv opis zapisa iz istorije (activity_log). */
+function activity_label(array $l): string
+{
+    $d = $l['details'] ? (json_decode((string) $l['details'], true) ?: []) : [];
+    $money = fn($v) => fmt_money((string) $v);
+    return match ($l['action']) {
+        'project_created'   => 'Projekat otvoren',
+        'project_updated'   => 'Izmenjen projekat' . (isset($d['deadline']) ? ' (rok)' : '') . (isset($d['install_week_start']) ? ' (nedelja)' : ''),
+        'project_released'  => 'Pušten u realizaciju',
+        'project_completed' => 'Projekat završen',
+        'project_archived'  => 'Arhiviran',
+        'project_restored'  => 'Vraćen iz arhive',
+        'system_added'      => 'Dodat sistem',
+        'system_removed'    => 'Uklonjen sistem',
+        'order_issued'      => 'Izdat nalog v' . ($d['version'] ?? 1),
+        'order_accepted'    => 'Preuzet nalog v' . ($d['version'] ?? 1),
+        'phase_started'     => 'Počela faza: ' . ($d['phase'] ?? ''),
+        'phase_completed'   => 'Završena faza: ' . ($d['phase'] ?? ''),
+        'phase_assigned'    => 'Faza dodeljena: ' . ($d['phase'] ?? ''),
+        'visit_created'     => 'Zakazan termin' . (!empty($d['date']) ? ' ' . fmt_dm($d['date']) : ''),
+        'visit_updated'     => !empty($d['reason']) ? 'Pomeren termin ' . fmt_dm($d['from'] ?? null) . ' → ' . fmt_dm($d['to'] ?? null) . ' (' . $d['reason'] . ')' : 'Izmenjen termin' . (!empty($d['confirmed']) ? ' · potvrđen' : ''),
+        'visit_cancelled'   => 'Otkazan termin (' . ($d['reason'] ?? '') . ')',
+        'visit_started'     => 'Počela montaža',
+        'visit_completed'   => 'Teren: ' . mb_strtolower(VISIT_RESULTS[$d['result'] ?? 'celo'] ?? ''),
+        'payment_received'  => 'Uplata ' . $money($d['amount'] ?? 0) . ' (' . mb_strtolower(METHOD_LABELS[$d['method'] ?? 'gotovina'] ?? '') . ')',
+        'payment_confirmed' => 'Naplata ' . $money($d['received'] ?? 0),
+        'stoppage'          => 'Zastoj: ' . ($d['note'] ?? ''),
+        'stoppage_resolved' => 'Rešen zastoj',
+        'item_completed'    => 'Stavka završena (v1)',
+        'item_started'      => 'Stavka započeta (v1)',
+        'file_uploaded'     => 'Dodat fajl',
+        'task_created'      => 'Zadatak: ' . ($d['title'] ?? ''),
+        'task_completed'    => 'Završen zadatak',
+        default             => $l['action'],
+    };
+}

@@ -13,7 +13,9 @@ if (!$user) {
 
 $file = q_one('SELECT * FROM files WHERE id = ?', [(int) ($_GET['id'] ?? 0)]);
 $allowed = false;
-if ($file && $file['task_id']) {
+if ($file && $file['pending']) {
+    $allowed = (int) $file['uploaded_by'] === (int) $user['id']; // upravo poslato, još nije zakačeno
+} elseif ($file && $file['task_id']) {
     $task = load_task((int) $file['task_id']);
     $allowed = $task && can_view_task($user, $task);
 } elseif ($file && $file['project_id']) {
@@ -31,7 +33,7 @@ if (str_contains($rel, '..') || !is_file($path)) {
     exit;
 }
 
-$code = $file['project_id'] ? (string) q_val('SELECT code FROM projects WHERE id = ?', [$file['project_id']]) : 'zadatak' . $file['task_id'];
+$code = $file['project_id'] ? (string) q_val('SELECT code FROM projects WHERE id = ?', [$file['project_id']]) : ($file['task_id'] ? 'zadatak' . $file['task_id'] : 'novo');
 $name = ($file['kind'] === 'nalog_pdf' ? 'Nalog-' : 'Foto-') . $code . '-' . $file['id'] . ($file['mime'] === 'application/pdf' ? '.pdf' : '.jpg');
 
 header('Content-Type: ' . $file['mime']);

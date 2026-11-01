@@ -41,14 +41,19 @@ set_exception_handler(function (Throwable $e): void {
 require APP_DIR . '/lib/helpers.php';
 require APP_DIR . '/lib/db.php';
 require APP_DIR . '/lib/auth.php';
+require APP_DIR . '/lib/dates.php';
 require APP_DIR . '/lib/projects.php';
 require APP_DIR . '/lib/upload.php';
 require APP_DIR . '/lib/rules.php';
-require APP_DIR . '/lib/project_actions.php';
 require APP_DIR . '/lib/push.php';
 require APP_DIR . '/lib/notify.php';
-require APP_DIR . '/lib/item_actions.php';
+require APP_DIR . '/lib/production.php';
+require APP_DIR . '/lib/field.php';
+require APP_DIR . '/lib/stoppages.php';
+require APP_DIR . '/lib/project_actions.php';
 require APP_DIR . '/lib/tasks.php';
+require APP_DIR . '/lib/cards.php';
+require APP_DIR . '/lib/migrate.php';
 
 function config(string $key, mixed $default = null): mixed
 {
@@ -60,4 +65,9 @@ function config(string $key, mixed $default = null): mixed
         $value = $value[$part];
     }
     return $value;
+}
+
+// Automatska nadogradnja baze posle ažuriranja fajlova
+if (!defined('MZ_NO_MIGRATE')) {
+    migrate_if_needed();
 }

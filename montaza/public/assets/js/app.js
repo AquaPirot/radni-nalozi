@@ -49,124 +49,154 @@
         return new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() });
     }
 
-    const pending = new WeakMap(); // input → Promise dok traje smanjivanje
+    // ══ Slanje fajlova jedan po jedan (slaba veza) ══════════════
+    // Svaki izabrani fajl se odmah smanji i pošalje (api/upload.php); forma dobija samo id.
+    // Neuspelo slanje ostaje označeno — dodir ponovo šalje. Forma ne ide dok se sve ne pošalje.
+    const UPLOAD_URL = '/api/upload.php';
 
-    async function handleResize(input) {
-        if (typeof DataTransfer === 'undefined' || !input.files.length) return;
-        try {
-            const dt = new DataTransfer();
-            for (const f of input.files) dt.items.add(await resizeFile(f));
-            input.files = dt.files;
-        } catch (_) { /* server ionako smanjuje i proverava */ }
+    function upItem(list, name, type, file) {
+        const el = document.createElement('span');
+        el.className = 'up-item busy';
+        el.innerHTML = (type === 'pdf' ? '<span class="up-pdf">PDF</span>' : '<img alt="">') +
+            '<span class="up-state">0%</span><button type="button" class="up-x" aria-label="Ukloni">×</button>';
+        if (type !== 'pdf') el.querySelector('img').src = URL.createObjectURL(file);
+        list.appendChild(el);
+        el._file = file;
+        el._name = name;
+        el._type = type;
+        return el;
     }
 
-    function showPreview(input) {
-        const zone = input.closest('[data-preview]');
-        if (!zone) return;
-        const img = zone.querySelector('.dz-img');
-        const file = input.files[0];
-        if (!img) return;
-        if (img.src) URL.revokeObjectURL(img.src);
-        if (file) {
-            img.src = URL.createObjectURL(file);
-            img.hidden = false;
-            zone.classList.add('has-img');
-        } else {
-            img.hidden = true;
-            zone.classList.remove('has-img');
-        }
-    }
-
-    function showFilename(input) {
-        const box = input.closest('[data-filename]');
-        if (!box) return;
-        const label = box.querySelector('span');
-        if (!box.dataset.label) box.dataset.label = label.textContent;
-        const file = input.files[0];
-        label.textContent = file ? file.name : box.dataset.label;
-        box.classList.toggle('has-file', !!file);
+    function sendItem(el) {
+        el.classList.remove('err', 'ok');
+        el.classList.add('busy');
+        const state = el.querySelector('.up-state');
+        state.textContent = '0%';
+        const prep = el._type === 'pdf' ? Promise.resolve(el._file) : resizeFile(el._file).catch(() => el._file);
+        el._job = prep.then((file) => new Promise((resolve) => {
+            const fd = new FormData();
+            fd.append('file', file, file.name);
+            fd.append('type', el._type);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', UPLOAD_URL);
+            xhr.setRequestHeader('X-CSRF-Token', window.MZ.csrf);
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.timeout = 120000;
+            xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) state.textContent = Math.round(ev.loaded / ev.total * 100) + '%'; };
+            const fail = (msg) => {
+                el.classList.remove('busy');
+                el.classList.add('err');
+                state.textContent = msg || 'Nije poslato — dodirni';
+                resolve(false);
+                gateAll();
+            };
+            xhr.onerror = () => fail();
+            xhr.ontimeout = () => fail();
+            xhr.onload = () => {
+                let r = null;
+                try { r = JSON.parse(xhr.responseText); } catch (_) {}
+                if (xhr.status !== 200 || !r || !r.ok) return fail(r && r.error ? r.error : null);
+                el.classList.remove('busy');
+                el.classList.add('ok');
+                state.textContent = '';
+                const hid = document.createElement('input');
+                hid.type = 'hidden';
+                hid.name = el._name + '[]';
+                hid.value = r.id;
+                el.appendChild(hid);
+                resolve(true);
+                gateAll();
+                saveDraftSoon(el.closest('form'));
+            };
+            xhr.send(fd);
+        }));
+        gateAll();
+        return el._job;
     }
 
     document.addEventListener('change', (e) => {
         const input = e.target;
         if (!(input instanceof HTMLInputElement) || input.type !== 'file') return;
-        const job = (input.hasAttribute('data-resize') ? handleResize(input) : Promise.resolve()).then(() => {
-            showPreview(input);
-            showFilename(input);
-            if (input.hasAttribute('data-add-photos')) addPhotos(input);
-            const g = input.closest('form[data-gate]');
-            if (g) gate(g);
-            const form = input.closest('form[data-autosubmit]');
-            if (form && input.files.length) form.requestSubmit ? form.requestSubmit() : form.submit();
-        });
-        pending.set(input, job);
+        const up = input.closest('[data-uploader]');
+        if (!up || !input.files.length) return;
+        const list = up.querySelector('.up-list');
+        const multiple = up.hasAttribute('data-multiple');
+        if (!multiple) list.querySelectorAll('.up-item').forEach((x) => x.remove());
+        for (const f of input.files) sendItem(upItem(list, up.dataset.name, up.dataset.type, f));
+        input.value = '';
     });
 
-    // ── Slanje forme ──
-    document.addEventListener('submit', async (e) => {
+    document.addEventListener('click', (e) => {
+        const x = e.target.closest('.up-x');
+        if (x) { x.closest('.up-item').remove(); gateAll(); return; }
+        const errItem = e.target.closest('.up-item.err');
+        if (errItem) sendItem(errItem);
+    });
+
+    function uploadsBusy(form) { return form.querySelectorAll('.up-item.busy').length; }
+    function uploadsFailed(form) { return form.querySelectorAll('.up-item.err').length; }
+    function uploadCount(form, name) { return form.querySelectorAll(`[data-uploader][data-name="${name}"] .up-item.ok`).length; }
+
+    // ══ Slanje forme: potvrda, zaštita od duplog pritiska, dugme koje je kliknuto ══
+    document.addEventListener('submit', (e) => {
         const form = e.target;
         if (form.dataset.confirm && !form.dataset.confirmed) {
             if (!window.confirm(form.dataset.confirm)) { e.preventDefault(); return; }
             form.dataset.confirmed = '1';
         }
+        if (uploadsBusy(form)) {
+            e.preventDefault();
+            alert('Slike se još šalju — sačekaj da se završe.');
+            return;
+        }
+        if (uploadsFailed(form)) {
+            e.preventDefault();
+            alert('Neke slike nisu poslate. Dodirni crvenu sliku da pokušaš ponovo ili je ukloni.');
+            return;
+        }
         if (form.dataset.submitting) { e.preventDefault(); return; }
-
+        // Vrednost kliknutog dugmeta (npr. "Sačuvaj nacrt" / "Pusti u realizaciju") mora da stigne
+        if (e.submitter && e.submitter.name) {
+            const h = document.createElement('input');
+            h.type = 'hidden';
+            h.name = e.submitter.name;
+            h.value = e.submitter.value;
+            form.appendChild(h);
+        }
         form.dataset.submitting = '1';
         const buttons = form.querySelectorAll('button[type=submit]');
         buttons.forEach((b) => { b.disabled = true; });
-        setTimeout(() => {
-            delete form.dataset.submitting;
-            buttons.forEach((b) => { b.disabled = false; });
-        }, 15000);
-
-        // Ako se slika još smanjuje, sačekaj pa pošalji (bez ponovnog submit događaja)
-        const jobs = [...form.querySelectorAll('input[type=file][data-resize]')].map((i) => pending.get(i)).filter(Boolean);
-        if (jobs.length) {
-            e.preventDefault();
-            await Promise.all(jobs);
-            HTMLFormElement.prototype.submit.call(form);
-        }
+        clearDraft(form);
+        setTimeout(() => { delete form.dataset.submitting; buttons.forEach((b) => { b.disabled = false; }); }, 15000);
     });
 
-    // ── Dodavanje više slika: svaki izbor ostaje u svom inputu, "+" se pravi ponovo ──
-    function addPhotos(input) {
-        const tile = input.closest('.thumb.add');
-        if (!tile || !input.files.length) return;
-        for (const f of input.files) {
-            const t = document.createElement('span');
-            t.className = 'thumb new';
-            const img = document.createElement('img');
-            img.alt = '';
-            img.src = URL.createObjectURL(f);
-            t.appendChild(img);
-            tile.before(t);
-        }
-        // input ostaje u formi (sakriven), a pravi se novo "+" polje
-        const fresh = tile.cloneNode(true);
-        const newInput = fresh.querySelector('input');
-        newInput.value = '';
-        tile.classList.remove('add');
-        tile.hidden = true;
-        tile.after(fresh);
-        gateAll();
-    }
-
-    // ── Zaključano dugme dok sve nije ispunjeno (server svejedno proverava) ──
+    // ══ Zaključano dugme dok nije sve ispunjeno (server svejedno proverava) ══
     function gate(form) {
         const miss = [];
         const min = +(form.dataset.minPhotos || 0);
-        let photos = +(form.dataset.existingPhotos || 0);
-        form.querySelectorAll('input[type=file][data-count]').forEach((i) => { photos += i.files.length; });
-        const posle = form.querySelector('input[name=posle]');
-        const needPosle = form.dataset.needPosle === '1';
-        if (needPosle && !(posle && posle.files.length)) miss.push('slika POSLE');
-        if (photos < min) miss.push(min === 1 ? 'fotografija' : `još ${min - photos} ${min - photos === 1 ? 'slika' : 'slike'}`);
+        if (min) {
+            const have = +(form.dataset.existingPhotos || 0) + form.querySelectorAll('.up-item.ok').length;
+            if (have < min) miss.push(min === 1 ? 'fotografija' : `još ${min - have} slike`);
+        }
+        form.querySelectorAll('[data-uploader][data-required]').forEach((u) => {
+            if (!u.closest('[hidden]') && getComputedStyle(u).display !== 'none' && !u.querySelector('.up-item.ok')) {
+                miss.push(u.querySelector('.up-head span').textContent.replace('*', '').trim().toLowerCase());
+            }
+        });
+        if (form.hasAttribute('data-need-result')) {
+            const r = form.querySelector('input[name=result]:checked');
+            if (!r) miss.push('ishod');
+            const partial = r && r.value !== 'celo';
+            const rem = form.querySelector('[data-req-partial]');
+            if (partial && rem && !rem.value.trim()) miss.push('šta je ostalo');
+            if (r && r.value === 'celo') {
+                form.querySelectorAll('[data-req-full]').forEach((c) => { if (!c.checked) miss.push(c.dataset.reqFull); });
+            }
+        }
         form.querySelectorAll('input[type=checkbox][data-req]').forEach((c) => { if (!c.checked) miss.push(c.dataset.req); });
+        if (uploadsBusy(form)) miss.push('slike se šalju…');
         const out = form.querySelector('[data-missing]');
         if (out) out.textContent = miss.length ? 'Fali: ' + miss.join(', ') : '';
-        form.querySelectorAll('[data-show-if-missing="posle"]').forEach((el) => {
-            el.hidden = !(needPosle && !(posle && posle.files.length));
-        });
         const btn = form.querySelector('button[type=submit]');
         if (btn && !form.dataset.submitting) btn.disabled = miss.length > 0;
     }
@@ -175,6 +205,140 @@
         const form = e.target.closest && e.target.closest('form[data-gate]');
         if (form) setTimeout(() => gate(form), 0);
     });
+    document.addEventListener('input', (e) => {
+        const form = e.target.closest && e.target.closest('form[data-gate]');
+        if (form) gate(form);
+    });
+
+    // ══ Sistemi u formi projekta ══════════════════════════════
+    let phaseTpl = {};
+    try { phaseTpl = JSON.parse((document.getElementById('phase-tpl') || {}).textContent || '{}'); } catch (_) {}
+
+    function syncSystem(row) {
+        const sel = row.querySelector('[data-sys-type]');
+        const opt = sel && sel.selectedOptions[0];
+        const fields = opt && opt.dataset.fields ? opt.dataset.fields.split(',') : [];
+        row.querySelectorAll('[data-spec]').forEach((f) => { f.hidden = !fields.includes(f.dataset.spec); });
+        const title = row.querySelector('.sys-title');
+        if (title) title.textContent = opt && opt.value ? opt.textContent : 'Sistem';
+        const du = row.querySelector('[data-done-until]');
+        if (du) {
+            const cur = du.value !== '0' ? du.value : du.dataset.value;
+            du.innerHTML = '<option value="0">ništa</option>';
+            (phaseTpl[sel.value] || []).forEach(([sort, name]) => {
+                const o = document.createElement('option');
+                o.value = sort;
+                o.textContent = name;
+                if (String(sort) === String(cur)) o.selected = true;
+                du.appendChild(o);
+            });
+        }
+    }
+    document.querySelectorAll('[data-sys]').forEach(syncSystem);
+    document.addEventListener('change', (e) => {
+        if (e.target.matches('[data-sys-type]')) syncSystem(e.target.closest('[data-sys]'));
+    });
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-sys-add]')) {
+            const list = document.querySelector('[data-sys-list]');
+            const tpl = document.getElementById('sys-template');
+            const i = 'n' + Date.now();
+            const wrap = document.createElement('div');
+            wrap.innerHTML = tpl.innerHTML.replaceAll('__i__', i);
+            const row = wrap.firstElementChild;
+            list.appendChild(row);
+            syncSystem(row);
+            row.querySelector('select').focus();
+        }
+        const rm = e.target.closest('[data-sys-remove]');
+        if (rm) {
+            const row = rm.closest('[data-sys]');
+            const id = row.querySelector('input[name$="[id]"]');
+            if (id && +id.value) {
+                row.querySelector('[data-sys-delete]').value = '1';
+                row.hidden = true;
+            } else {
+                row.remove();
+            }
+        }
+    });
+    if (document.querySelector('[data-sys-list]') && !document.querySelector('[data-sys]') && document.querySelector('#wt-novi:checked')) {
+        const add = document.querySelector('[data-sys-add]');
+        if (add) add.click();
+    }
+
+    // ══ Zastoj: predlog ko rešava po razlogu ══════════════════
+    document.addEventListener('change', (e) => {
+        const r = e.target.closest('[data-stoppage] input[name=reason]');
+        if (!r) return;
+        const sel = r.form.querySelector('select[name=owner_id]');
+        if (sel && !sel.dataset.touched && +r.dataset.owner) sel.value = r.dataset.owner;
+    });
+    document.addEventListener('change', (e) => { if (e.target.matches('[data-stoppage] select[name=owner_id]')) e.target.dataset.touched = '1'; });
+
+    // ══ Automatsko čuvanje nacrta forme na telefonu ═══════════
+    // Tekst i izbori se čuvaju dok se kuca; posle uspešnog slanja brišu se.
+    const draftKey = (form) => 'mz_draft_' + form.dataset.autosave;
+    const draftTimers = new WeakMap();
+    function serialize(form) {
+        const data = {};
+        for (const el of form.elements) {
+            if (!el.name || el.type === 'hidden' || el.type === 'file' || el.name.startsWith('_')) continue;
+            if ((el.type === 'radio' || el.type === 'checkbox') && !el.checked) continue;
+            (data[el.name] ||= []).push(el.value);
+        }
+        return data;
+    }
+    function saveDraftSoon(form) {
+        if (!form || !form.dataset.autosave) return;
+        clearTimeout(draftTimers.get(form));
+        draftTimers.set(form, setTimeout(() => {
+            try {
+                localStorage.setItem(draftKey(form), JSON.stringify({ t: Date.now(), d: serialize(form) }));
+                const st = form.querySelector('[data-autosave-status]');
+                if (st) st.textContent = 'Sačuvano na telefonu ' + new Date().toLocaleTimeString('sr-RS', { hour: '2-digit', minute: '2-digit' });
+            } catch (_) {}
+        }, 600));
+    }
+    function clearDraft(form) { try { if (form.dataset.autosave) localStorage.removeItem(draftKey(form)); } catch (_) {} }
+    document.querySelectorAll('form[data-autosave]').forEach((form) => {
+        let saved = null;
+        try { saved = JSON.parse(localStorage.getItem(draftKey(form)) || 'null'); } catch (_) {}
+        if (saved && saved.d && Date.now() - saved.t < 7 * 864e5 && !document.querySelector('.alert.warn')) {
+            const st = form.querySelector('[data-autosave-status]');
+            const bar = document.createElement('div');
+            bar.className = 'alert';
+            bar.innerHTML = 'Postoji nesačuvan unos sa ovog telefona. <button type="button" class="link accent">Vrati ga</button>';
+            form.prepend(bar);
+            bar.querySelector('button').addEventListener('click', () => {
+                // dodaj redove sistema koliko treba, pa popuni vrednosti
+                const sysNames = Object.keys(saved.d).filter((n) => /^systems\[/.test(n));
+                const keys = [...new Set(sysNames.map((n) => n.match(/^systems\[([^\]]+)\]/)[1]))];
+                keys.forEach((k) => {
+                    if (!form.querySelector(`[name^="systems[${k}]"]`)) {
+                        const tpl = document.getElementById('sys-template');
+                        if (!tpl) return;
+                        const wrap = document.createElement('div');
+                        wrap.innerHTML = tpl.innerHTML.replaceAll('__i__', k);
+                        form.querySelector('[data-sys-list]').appendChild(wrap.firstElementChild);
+                    }
+                });
+                for (const [name, vals] of Object.entries(saved.d)) {
+                    const els = form.querySelectorAll(`[name="${CSS.escape(name)}"]`);
+                    els.forEach((el, i) => {
+                        if (el.type === 'radio' || el.type === 'checkbox') el.checked = vals.includes(el.value);
+                        else if (vals[i] !== undefined) el.value = vals[i];
+                    });
+                }
+                form.querySelectorAll('[data-sys]').forEach(syncSystem);
+                bar.remove();
+                if (st) st.textContent = 'Unos je vraćen.';
+            });
+        }
+        form.addEventListener('input', () => saveDraftSoon(form));
+        form.addEventListener('change', () => saveDraftSoon(form));
+    });
+
     document.addEventListener('DOMContentLoaded', gateAll);
     if (document.readyState !== 'loading') gateAll();
 

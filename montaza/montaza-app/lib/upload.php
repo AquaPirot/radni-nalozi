@@ -166,3 +166,57 @@ function file_url(int $id, bool $thumb = false): string
 {
     return rtrim((string) config('base_url', ''), '/') . '/file.php?id=' . $id . ($thumb ? '&t=1' : '');
 }
+
+// ── Slanje slika jedna po jedna (slaba veza) ───────────────
+// Fajl se pošalje odmah pri izboru (api/upload.php) i dobija id; forma kasnije šalje samo id-jeve.
+
+/** Čuva poslat fajl kao "na čekanju" (nije još vezan ni za šta). Vraća red iz files. */
+function store_pending(array $upload, string $type, int $userId): array
+{
+    $stored = $type === 'pdf' ? store_pdf($upload) : store_image($upload);
+    q('INSERT INTO files (project_id, kind, path, thumb_path, mime, width, height, size, uploaded_by, pending)
+       VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
+        [$type === 'pdf' ? 'nalog_pdf' : 'foto', $stored['path'], $stored['thumb_path'], $stored['mime'],
+         $stored['width'], $stored['height'], $stored['size'], $userId]);
+    return q_one('SELECT * FROM files WHERE id = ?', [(int) db()->lastInsertId()]);
+}
+
+/** Id-jevi iz forme (name="x[]"), samo celi brojevi. */
+function posted_ids(string $name): array
+{
+    $v = $_POST[$name] ?? [];
+    return array_values(array_unique(array_filter(array_map('intval', is_array($v) ? $v : [$v]))));
+}
+
+/**
+ * Vezuje fajlove na čekanju za projekat / fazu / termin / zadatak.
+ * $set: phase_id, visit_id, task_id, kind, purpose. Samo fajlovi koje je poslao isti korisnik.
+ */
+function attach_temp_files(array $ids, ?int $projectId, array $set, int $userId): int
+{
+    if (!$ids) {
+        return 0;
+    }
+    $cols = ['project_id = ?', 'pending = 0'];
+    $params = [$projectId];
+    foreach (['phase_id', 'visit_id', 'task_id', 'kind', 'purpose'] as $k) {
+        if (array_key_exists($k, $set)) {
+            $cols[] = "$k = ?";
+            $params[] = $set[$k];
+        }
+    }
+    $params = array_merge($params, $ids, [$userId]);
+    return q('UPDATE files SET ' . implode(', ', $cols) . ' WHERE id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') AND pending = 1 AND uploaded_by = ?', $params)->rowCount();
+}
+
+/** Briše fajlove koji su poslati a nikad zakačeni (stariji od 2 dana). */
+function cleanup_pending_files(): int
+{
+    $n = 0;
+    foreach (q_all('SELECT * FROM files WHERE pending = 1 AND created_at < NOW() - INTERVAL 2 DAY') as $f) {
+        delete_stored($f);
+        q('DELETE FROM files WHERE id = ?', [$f['id']]);
+        $n++;
+    }
+    return $n;
+}

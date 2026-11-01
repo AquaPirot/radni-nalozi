@@ -646,3 +646,111 @@ a.rcard.static { color: inherit; }
 .pcard-foot { gap: 6px; }
 @media (max-width: 380px) { .counter strong { font-size: 24px; } .counter span { font-size: 11px; } }
 .bottom-nav a { min-width: 0; flex: 1; font-size: 12px; }
+
+/* ══ V2 ═══════════════════════════════════════════════════ */
+.link { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; text-decoration: underline; }
+.link.warn { color: var(--warn); }
+.inline-form { display: contents; }
+.plain { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.segments.scroll { flex-wrap: nowrap; overflow-x: auto; }
+.segments.scroll .seg { flex: 0 0 auto; }
+
+/* Oznake statusa: boja + naziv */
+.pill { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; background: var(--surface-2); color: var(--text-2); }
+.pill.st-zavrseno, .pill.stage-zavrseno, .pill.pay-naplaceno { background: rgba(198, 242, 78, .15); color: var(--accent); }
+.pill.st-u_toku, .pill.stage-montaza, .pill.stage-spremno { background: rgba(140, 200, 255, .15); color: var(--info); }
+.pill.st-zastoj, .pill.pay-za_naplatu { background: rgba(255, 138, 61, .15); color: var(--warn); }
+.pill.pay-delimicno { background: rgba(255, 138, 61, .1); color: var(--warn); }
+.pill.stage-proizvodnja { background: var(--surface-2); color: var(--text); }
+.pill.stage-nacrt { background: transparent; border: 1px dashed var(--muted); color: var(--muted); }
+.status.info { color: var(--info); } .status.info i { background: var(--info); }
+.status.pay { color: var(--warn); } .status.pay i { background: var(--warn); }
+
+/* Kartica projekta (hijerarhija 1–5) */
+.cards-grid { display: flex; flex-direction: column; gap: 18px; }
+.pcard { gap: 6px; padding: 16px 18px; }
+.pc-1 { font-size: 19px; line-height: 1.25; }
+.pc-1 strong { font-weight: 700; }
+.pc-1 span { color: var(--text-2); }
+.pc-2 { color: var(--text-2); font-size: 15px; }
+.pc-3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.pc-4 { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
+.pc-5 { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 6px; border-top: 1px solid var(--border); font-size: 14px; }
+.pc-5 .status { font-size: 14px; }
+.paytag.task-count { margin-left: auto; margin-right: 0; font-family: var(--font); font-weight: 500; letter-spacing: 0; text-transform: none; }
+
+/* Zaglavlje projekta */
+.ph-top { display: flex; flex-direction: column; gap: 10px; padding-top: 20px; }
+.ph-top .h1 { margin: 0; font-size: 30px; }
+.ph-sub { color: var(--text-2); font-size: 16px; }
+.ph-sys { font-size: 15px; }
+.next-action { display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 14px; padding: 12px 16px; }
+.next-action strong { font-size: 17px; }
+.problem { display: flex; flex-direction: column; gap: 6px; background: rgba(255, 138, 61, .08); border: 1px solid rgba(255, 138, 61, .45); border-radius: 14px; padding: 12px 16px; }
+.problem p { font-size: 15px; }
+.problem .btn { align-self: flex-start; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 6px -16px 0; padding: 0 16px; overflow-x: auto; position: sticky; top: 0; z-index: 6; background: var(--bg); }
+.tabs a { padding: 14px 12px; color: var(--muted); font-weight: 600; white-space: nowrap; border-bottom: 3px solid transparent; }
+.tabs a.on { color: var(--text); border-bottom-color: var(--accent); }
+.stepper { display: flex; justify-content: space-between; position: relative; margin: 6px 4px; }
+.stepper::before { content: ''; position: absolute; left: 16px; right: 16px; top: 14px; height: 3px; background: #2C3036; }
+.step { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); z-index: 1; }
+.step i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 700 13px var(--mono); font-style: normal; background: var(--bg); border: 2px solid #3A3F45; }
+.step.done i { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.step.cur i { border-color: var(--accent); color: var(--accent); }
+.step.cur, .step.done { color: var(--text); }
+.sys-line { align-items: flex-start; }
+.paycard .amount-big { font-size: 26px; }
+.mini-form summary { list-style: none; cursor: pointer; }
+.mini-form summary::-webkit-details-marker { display: none; }
+.mini-form[open] > summary { margin-bottom: 10px; }
+.checks-list { list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.checks-list li { display: flex; align-items: center; gap: 8px; }
+.checks-list li.ok { color: var(--accent); }
+.checks-list li.no { color: var(--warn); }
+.tl-card.quiet { background: transparent; border-color: transparent; padding: 4px 0 8px; }
+.btn.sm .ic { margin-right: 2px; }
+.doc-photo { width: 100%; max-height: 360px; object-fit: cover; border-radius: 16px; }
+.mini-thumb { width: 64px; height: 48px; object-fit: cover; border-radius: 8px; }
+.history-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.history-list li { display: flex; gap: 12px; align-items: baseline; }
+.history-list li span:first-child { min-width: 84px; }
+
+/* Forma projekta */
+.fsec { display: flex; flex-direction: column; gap: 14px; padding: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
+.fsec-h { display: flex; align-items: center; gap: 10px; font-size: 18px; }
+.fsec-h span { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font: 700 14px var(--mono); }
+.sys-row { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg); }
+.sys-row[hidden] { display: none; }
+.grid-sys { display: grid; grid-template-columns: 1fr 96px; gap: 10px; }
+.spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.spec-grid [hidden] { display: none; }
+.sys-foot { align-items: flex-end; flex-wrap: wrap; }
+.done-until { min-width: 160px; }
+.pform:not(:has(#wt-reklamacija:checked)) .only-rekl,
+.pform:not(:has(#in-preuzet:checked)) .only-preuzet { display: none !important; }
+
+/* Slanje fajlova jedan po jedan */
+.uploader { display: flex; flex-direction: column; gap: 10px; }
+.up-head { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+.up-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.up-list:empty { display: none; }
+.up-item { position: relative; width: 92px; height: 92px; border-radius: 14px; overflow: hidden; background: #23272C; display: grid; place-items: center; border: 2px solid transparent; }
+.up-item img { width: 100%; height: 100%; object-fit: cover; }
+.up-item.busy img { opacity: .5; }
+.up-item.ok { border-color: var(--accent); }
+.up-item.err { border-color: var(--warn); cursor: pointer; }
+.up-state { position: absolute; left: 4px; right: 4px; bottom: 4px; font: 600 11px/1.2 var(--mono); text-align: center; color: var(--text); text-shadow: 0 1px 2px #000; }
+.up-item.err .up-state { color: var(--warn); }
+.up-pdf { font: 700 15px var(--mono); color: var(--text-2); }
+.up-x { position: absolute; top: 2px; right: 2px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(14, 15, 17, .8); color: var(--text); font-size: 18px; line-height: 1; cursor: pointer; }
+.up-add { position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; border: 1.5px dashed #3A3F45; border-radius: 14px; cursor: pointer; font-weight: 600; color: var(--text-2); }
+.up-add input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.uploader:has(.up-item.ok):not([data-multiple]) .up-add { display: none; }
+
+/* Završetak na terenu */
+.pp-info { padding: 14px; text-align: center; color: var(--text-2); }
+.done-form:not(:has(#res-delimicno:checked)):not(:has(#res-ponovni:checked)) .only-partial { display: none; }
+.done-form:not(:has(#res-celo:checked)) .only-full { display: none; }
+.radio.result-celo input:checked + span { border-color: var(--accent); color: var(--accent); background: rgba(198, 242, 78, .08); }
+.radio.result-delimicno input:checked + span, .radio.result-ponovni input:checked + span { border-color: var(--warn); color: var(--warn); }

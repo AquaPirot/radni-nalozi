@@ -1,272 +1,218 @@
 <?php
 declare(strict_types=1);
 
-// Radnje nad projektima (vlasnik). Pravila se proveravaju u rules.php.
+// Radnje nad projektom (vlasnik): nacrt, puštanje u realizaciju, izmena sistema, arhiva.
 
-/**
- * Pravi projekat sa stavkama iz šablona, slikom lokacije i PDF nalogom.
- * Fajlovi se prvo snime na disk; ako baza pukne, brišu se.
- */
-function create_project(array $in, array $user, ?array $lokacijaUpload, ?array $pdfUpload): int
+/** Čuva projekat (novi ili postojeći). $release: pusti u realizaciju posle čuvanja. Vraća id. */
+function project_save(?array $project, array $in, array $user, bool $release): int
 {
-    $stored = [];
+    db()->beginTransaction();
     try {
-        $lok = $lokacijaUpload ? $stored[] = store_image($lokacijaUpload) : null;
-        $pdf = $pdfUpload ? $stored[] = store_pdf($pdfUpload) : null;
-
-        db()->beginTransaction();
-        $code = next_project_code();
-        q(
-            'INSERT INTO projects (code, type, parent_project_id, customer_name, phone, city, address, description,
-                has_steel, install_week_start, deadline, payment_when, payment_amount, notes, created_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [
-                $code, $in['type'], $in['type'] === 'reklamacija' ? $in['parent_project_id'] : null,
-                $in['customer_name'], $in['phone'] ?: null, $in['city'] ?: null, $in['address'] ?: null,
-                $in['description'] ?: null, (int) $in['has_steel'], $in['install_week_start'], $in['deadline'],
-                $in['payment_when'], $in['payment_when'] === 'ne' ? null : $in['payment_amount'],
-                $in['notes'] ?: null, $user['id'],
-            ]
-        );
-        $pid = (int) db()->lastInsertId();
-
-        // Stavke iz šablona. Za "započet": sve do izabrane stavke već je urađeno (imported, bez slika).
-        $doneSort = 0;
-        if ($in['type'] === 'zapocet' && $in['done_until'] !== '') {
-            foreach (TEMPLATE_STD as [$kind, , $sort]) {
-                if ($kind === $in['done_until']) {
-                    $doneSort = $sort;
+        $fields = [
+            'work_type' => $in['work_type'], 'intake' => $in['intake'],
+            'customer_name' => $in['customer_name'], 'phone' => $in['phone'] ?: null, 'city' => $in['city'] ?: null,
+            'address' => $in['address'] ?: null, 'description' => $in['description'] ?: null, 'deadline' => $in['deadline'],
+            'payment_when' => $in['payment_when'], 'payment_amount' => $in['payment_when'] === 'ne' ? null : $in['payment_amount'],
+            'payment_collector' => $in['payment_collector'], 'notes' => $in['notes'] ?: null,
+            'parent_project_id' => $in['work_type'] === 'reklamacija' ? $in['parent_project_id'] : null,
+        ];
+        if ($project) {
+            $pid = (int) $project['id'];
+            $changed = [];
+            foreach ($fields as $k => $v) {
+                if ((string) ($project[$k] ?? '') !== (string) ($v ?? '')) {
+                    $changed[$k] = ['old' => $project[$k] ?? null, 'new' => $v];
                 }
             }
-        }
-        $itemIds = [];
-        foreach (item_template($in['type'], $in['has_steel']) as [$kind, $resp, $sort]) {
-            $imported = $sort <= $doneSort;
-            q(
-                'INSERT INTO project_items (project_id, kind, sort, responsible, due_date, status, completed_at, completed_by, imported)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [
-                    $pid, $kind, $sort, $resp,
-                    in_array($kind, ['montaza', 'servis'], true) ? $in['deadline'] : null,
-                    $imported ? 'zavrseno' : 'ceka',
-                    $imported ? date('Y-m-d H:i:s') : null,
-                    $imported ? $user['id'] : null,
-                    (int) $imported,
-                ]
-            );
-            $itemIds[$kind] = (int) db()->lastInsertId();
+            if ($changed) {
+                $set = implode(', ', array_map(fn($k) => "$k = ?", array_keys($fields)));
+                q("UPDATE projects SET $set WHERE id = ?", array_merge(array_values($fields), [$pid]));
+                log_activity('project_updated', $pid, null, $changed);
+            }
+        } else {
+            $code = next_project_code();
+            $fields['code'] = $code;
+            $fields['status'] = 'nacrt';
+            $fields['created_by'] = $user['id'];
+            $cols = implode(', ', array_keys($fields));
+            q("INSERT INTO projects ($cols) VALUES (" . in_list($fields) . ')', array_values($fields));
+            $pid = (int) db()->lastInsertId();
+            log_activity('project_created', $pid, null, ['code' => $code, 'customer' => $in['customer_name'], 'work_type' => $in['work_type']]);
         }
 
-        if ($lok) {
-            insert_file($pid, null, 'lokacija_pre', $lok, $user['id']);
-        }
-        if ($pdf && isset($itemIds['nalog'])) {
-            insert_file($pid, $itemIds['nalog'], 'nalog_pdf', $pdf, $user['id']);
-            // Pravilo 1: PDF zatvara stavku "nalog"
-            q(
-                "UPDATE project_items SET status = 'zavrseno', completed_at = COALESCE(completed_at, NOW()),
-                    completed_by = COALESCE(completed_by, ?), imported = 0 WHERE id = ?",
-                [$user['id'], $itemIds['nalog']]
-            );
-        }
+        $status = $project['status'] ?? 'nacrt';
+        save_systems($pid, $in['systems'], $status !== 'nacrt', $user);
 
-        log_activity('project_created', $pid, null, [
-            'code' => $code, 'type' => $in['type'], 'customer' => $in['customer_name'],
-            'done_until' => $in['done_until'] ?: null,
-        ]);
         db()->commit();
     } catch (Throwable $ex) {
         if (db()->inTransaction()) {
             db()->rollBack();
         }
-        foreach ($stored as $s) {
-            delete_stored($s);
-        }
         throw $ex;
     }
 
-    rule_maybe_complete_project($pid);
-    notify(['hala', 'teren'], 'Novi projekat: ' . project_ref($in)
-        . ' (' . mb_strtolower(TYPE_LABELS[$in['type']]) . ($in['has_steel'] ? ' + čelik' : '') . ')'
-        . ($in['install_week_start'] ? ' — montaža ' . week_label($in['install_week_start']) : ' — nije raspoređeno')
-        . ($in['deadline'] ? ', rok ' . fmt_dm($in['deadline']) : ''), $pid);
+    if ($in['lokacija_id']) {
+        try {
+            set_lokacija_photo(load_project($pid), (int) $in['lokacija_id'], $user);
+        } catch (RuleError) {
+            // već zakačena (dupli klik) — ništa
+        }
+    }
+    if ($in['nalog_id']) {
+        order_issue_from_file(load_project($pid), (int) $in['nalog_id'], $user);
+    }
+    if ($release && $status === 'nacrt') {
+        project_release($pid, $in, $user);
+    }
     return $pid;
 }
 
-/** Izmena projekta. Tip se ne menja. Vraća listu poruka za korisnika (npr. šta nije moglo). */
-function update_project(array $project, array $in, array $user, array $dueDates): array
+/**
+ * Sistemi projekta. Ako je projekat već u realizaciji, novi sistem odmah dobija faze;
+ * brisanje i promena vrste su dozvoljeni samo dok nijedna faza tog sistema nije započeta.
+ */
+function save_systems(int $pid, array $systems, bool $active, array $user): void
 {
-    $pid = (int) $project['id'];
-    $items = load_items($pid);
-    $notes = [];
-
-    $fields = [
-        'customer_name'      => $in['customer_name'],
-        'phone'              => $in['phone'] ?: null,
-        'city'               => $in['city'] ?: null,
-        'address'            => $in['address'] ?: null,
-        'description'        => $in['description'] ?: null,
-        'install_week_start' => $in['install_week_start'],
-        'deadline'           => $in['deadline'],
-        'notes'              => $in['notes'] ?: null,
-    ];
-
-    // Naplata se ne menja posle potvrde terena
-    if ($project['payment_confirmed_at']) {
-        if ($in['payment_when'] !== $project['payment_when'] || $in['payment_amount'] !== ($project['payment_amount'] ?? null)) {
-            $notes[] = 'Naplata je već potvrđena — iznos i način naplate nisu menjani.';
-        }
-    } else {
-        $fields['payment_when'] = $in['payment_when'];
-        $fields['payment_amount'] = $in['payment_when'] === 'ne' ? null : $in['payment_amount'];
+    $existing = [];
+    foreach (q_all('SELECT * FROM project_systems WHERE project_id = ?', [$pid]) as $s) {
+        $existing[(int) $s['id']] = $s;
     }
-
-    db()->beginTransaction();
-    try {
-        $changed = [];
-        foreach ($fields as $k => $v) {
-            $old = $project[$k];
-            if ((string) $old !== (string) $v) {
-                $changed[$k] = ['old' => $old, 'new' => $v];
-            }
-        }
-        if ($changed) {
-            $set = implode(', ', array_map(fn($k) => "$k = ?", array_keys($fields)));
-            q("UPDATE projects SET $set WHERE id = ?", array_merge(array_values($fields), [$pid]));
-        }
-
-        // Čelična konstrukcija: uključi/isključi dok stavka nije započeta
-        if ($project['type'] !== 'reklamacija' && (bool) $project['has_steel'] !== $in['has_steel']) {
-            if (!rule_can_toggle_steel($items)) {
-                $notes[] = 'Čelična konstrukcija je već započeta — ne može se isključiti.';
-            } else {
-                if ($in['has_steel']) {
-                    q("INSERT INTO project_items (project_id, kind, sort, responsible) VALUES (?, 'celik', 20, 'hala')", [$pid]);
-                } else {
-                    q("DELETE FROM project_items WHERE project_id = ? AND kind = 'celik' AND status = 'ceka'", [$pid]);
+    $started = fn(int $sid) => (bool) q_val("SELECT 1 FROM production_phases WHERE system_id = ? AND (status <> 'ceka' OR imported = 1) LIMIT 1", [$sid]);
+    $sort = 10;
+    foreach ($systems as $s) {
+        $id = $s['id'] && isset($existing[$s['id']]) ? $s['id'] : null;
+        if ($s['delete']) {
+            if ($id) {
+                if ($started($id)) {
+                    throw new RuleError('Sistem čija je izrada počela ne može da se obriše.');
                 }
-                q('UPDATE projects SET has_steel = ? WHERE id = ?', [(int) $in['has_steel'], $pid]);
-                $changed['has_steel'] = ['old' => (int) $project['has_steel'], 'new' => (int) $in['has_steel']];
+                q('DELETE FROM project_systems WHERE id = ?', [$id]);
+                log_activity('system_removed', $pid, null, ['system_id' => $id]);
+            }
+            continue;
+        }
+        $row = [$s['type_id'], $s['qty'], $s['width'], $s['length'], $s['height'], $s['ral'] ?: null,
+                $s['spec'] ? json_encode($s['spec'], JSON_UNESCAPED_UNICODE) : null, $s['note'] ?: null, (int) $s['with_steel'], $sort];
+        if ($id) {
+            $old = $existing[$id];
+            $typeChanged = (int) $old['system_type_id'] !== (int) $s['type_id'] || (int) $old['with_steel'] !== (int) $s['with_steel'];
+            if ($typeChanged && $started($id)) {
+                throw new RuleError('Vrsta sistema ne može da se menja kad je izrada počela.');
+            }
+            q('UPDATE project_systems SET system_type_id = ?, qty = ?, width = ?, length = ?, height = ?, ral = ?, spec = ?, note = ?, with_steel = ?, sort = ? WHERE id = ?',
+                array_merge($row, [$id]));
+            if ($typeChanged && $active) {
+                q('DELETE FROM production_phases WHERE system_id = ?', [$id]);
+                create_system_phases($pid, $id, $s['type_id'], $s['with_steel'], 0, (int) $user['id']);
+            }
+        } else {
+            q('INSERT INTO project_systems (system_type_id, qty, width, length, height, ral, spec, note, with_steel, sort, project_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                array_merge($row, [$pid]));
+            $id = (int) db()->lastInsertId();
+            if ($active) {
+                create_system_phases($pid, $id, $s['type_id'], $s['with_steel'], 0, (int) $user['id']);
+                log_activity('system_added', $pid, null, ['system_id' => $id]);
+            } else {
+                // nacrt: zapamti "već urađeno do" za puštanje u realizaciju
+                if ($s['done_until']) {
+                    q("UPDATE project_systems SET spec = JSON_SET(COALESCE(spec, '{}'), '$._done_until', ?) WHERE id = ?", [$s['done_until'], $id]);
+                }
             }
         }
-
-        // Rokovi po stavkama
-        foreach ($items as $it) {
-            if (!array_key_exists($it['id'], $dueDates)) {
-                continue;
-            }
-            $raw = trim((string) $dueDates[$it['id']]);
-            $d = DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
-            $new = $d && $d->format('Y-m-d') === $raw ? $raw : null;
-            if ($new !== $it['due_date']) {
-                q('UPDATE project_items SET due_date = ? WHERE id = ?', [$new, $it['id']]);
-                $changed['due_' . $it['kind']] = ['old' => $it['due_date'], 'new' => $new];
-            }
-        }
-
-        if ($changed) {
-            log_activity('project_updated', $pid, null, $changed);
-        }
-        db()->commit();
-    } catch (Throwable $ex) {
-        db()->rollBack();
-        throw $ex;
+        $sort += 10;
     }
-    if (isset($changed['install_week_start']) && $in['install_week_start'] && $project['status'] === 'aktivan') {
-        notify_week_scheduled(array_merge($project, $fields), $in['install_week_start']);
-    }
-    return $notes;
 }
 
-/** Briše projekat, njegove stavke i fajlove (i sa diska). activity_log ostaje. */
-function delete_project(array $project): void
+/** Nacrt → realizacija: pravi faze za sisteme, beleži preuzeti posao, obaveštava halu i teren. */
+function project_release(int $pid, array $in, array $user): void
 {
-    $files = load_files((int) $project['id']);
+    $p = load_project($pid);
+    if (!$p || $p['status'] !== 'nacrt') {
+        return;
+    }
+    $anyDone = false;
+    foreach (systems_for([$pid])[$pid] ?? [] as $s) {
+        if (q_val('SELECT 1 FROM production_phases WHERE system_id = ? LIMIT 1', [$s['id']])) {
+            continue;
+        }
+        $doneUntil = (int) ($s['spec']['_done_until'] ?? 0);
+        foreach ($in['systems'] as $row) {
+            if ($row['id'] && (int) $row['id'] === (int) $s['id'] && $row['done_until']) {
+                $doneUntil = $row['done_until'];
+            }
+        }
+        if ($p['intake'] !== 'preuzet') {
+            $doneUntil = 0;
+        }
+        $anyDone = $anyDone || $doneUntil > 0;
+        create_system_phases($pid, (int) $s['id'], $s['system_type_id'] ? (int) $s['system_type_id'] : null, (bool) $s['with_steel'], $doneUntil, (int) $user['id']);
+    }
+    q("UPDATE projects SET status = 'aktivan', released_at = NOW() WHERE id = ?", [$pid]);
+    // Preuzet započet posao: nalog se smatra izdatim i preuzetim ako je izrada već počela
+    if ($p['intake'] === 'preuzet' && $anyDone && !q_val('SELECT 1 FROM project_orders WHERE project_id = ?', [$pid])) {
+        q("INSERT INTO project_orders (project_id, version, note, issued_by, accepted_by, accepted_at) VALUES (?, 1, 'Uneto pri preuzimanju započetog posla', ?, ?, NOW())",
+            [$pid, $user['id'], $user['id']]);
+    }
+    log_activity('project_released', $pid);
+    $b = bundle_one($pid);
+    notify(['hala', 'teren'], 'Novi posao: ' . project_ref($p) . ($b['systems'] ? ' — ' . systems_summary($b['systems']) : '') . ($p['deadline'] ? ', rok ' . fmt_dm($p['deadline']) : ''), $pid);
+}
+
+/** PDF koji je već poslat (na čekanju) postaje nova verzija naloga. */
+function order_issue_from_file(array $project, int $fileId, array $user, string $note = ''): void
+{
+    $n = attach_temp_files([$fileId], (int) $project['id'], ['kind' => 'nalog_pdf'], (int) $user['id']);
+    if (!$n) {
+        return;
+    }
+    $prev = q_one('SELECT * FROM project_orders WHERE project_id = ? ORDER BY version DESC LIMIT 1', [$project['id']]);
+    $version = $prev ? (int) $prev['version'] + 1 : 1;
+    q('INSERT INTO project_orders (project_id, version, file_id, note, issued_by) VALUES (?, ?, ?, ?, ?)',
+        [$project['id'], $version, $fileId, $note !== '' ? $note : null, $user['id']]);
+    log_activity('order_issued', (int) $project['id'], null, ['version' => $version, 'file' => $fileId]);
+    if ($project['status'] === 'aktivan' || $version > 1) {
+        notify(['hala'], ($version > 1 ? 'IZMENJEN NALOG v' . $version : 'Novi radni nalog') . ': ' . project_ref($project) . ' — preuzmi ga u aplikaciji.' . ($note !== '' ? " ($note)" : ''), (int) $project['id']);
+    }
+}
+
+function project_archive(array $p, array $user): void
+{
+    q('UPDATE projects SET archived_at = NOW() WHERE id = ?', [$p['id']]);
+    log_activity('project_archived', (int) $p['id'], null, ['code' => $p['code']]);
+}
+
+function project_restore(array $p, array $user): void
+{
+    q('UPDATE projects SET archived_at = NULL WHERE id = ?', [$p['id']]);
+    log_activity('project_restored', (int) $p['id']);
+}
+
+/** Trajno brisanje — samo iz arhive. */
+function project_delete(array $project): void
+{
+    $files = q_all('SELECT * FROM files WHERE project_id = ? AND task_id IS NULL', [$project['id']]);
     db()->beginTransaction();
-    // Zadaci vezani za projekat ostaju (bez veze), a njihove slike sa njima
     q('UPDATE files SET project_id = NULL WHERE project_id = ? AND task_id IS NOT NULL', [$project['id']]);
     q('UPDATE stoppages SET project_id = NULL WHERE project_id = ? AND task_id IS NOT NULL', [$project['id']]);
     q('UPDATE projects SET parent_project_id = NULL WHERE parent_project_id = ?', [$project['id']]);
     q('DELETE FROM projects WHERE id = ?', [$project['id']]);
-    log_activity('project_deleted', (int) $project['id'], null, [
-        'code' => $project['code'], 'customer' => $project['customer_name'], 'files' => count($files),
-    ]);
+    log_activity('project_deleted', (int) $project['id'], null, ['code' => $project['code'], 'customer' => $project['customer_name']]);
     db()->commit();
     foreach ($files as $f) {
         delete_stored($f);
     }
 }
 
-/** Kači PDF nalog i zatvara stavku "nalog" (pravilo 1). */
-function attach_nalog_pdf(array $project, array $upload, array $user): void
+/** Postavlja ili menja sliku lokacije PRE (fajl je već poslat). */
+function set_lokacija_photo(array $project, int $fileId, array $user): void
 {
-    $nalog = q_one("SELECT * FROM project_items WHERE project_id = ? AND kind = 'nalog'", [$project['id']]);
-    if (!$nalog) {
-        throw new UploadError('Ovaj projekat nema stavku nalog.');
-    }
-    $pdf = store_pdf($upload);
-    try {
-        db()->beginTransaction();
-        $fid = insert_file((int) $project['id'], (int) $nalog['id'], 'nalog_pdf', $pdf, $user['id']);
-        if ($nalog['status'] !== 'zavrseno' || $nalog['imported']) {
-            q(
-                "UPDATE project_items SET status = 'zavrseno', completed_at = NOW(), completed_by = ?, imported = 0 WHERE id = ?",
-                [$user['id'], $nalog['id']]
-            );
-            log_activity('item_completed', (int) $project['id'], (int) $nalog['id'], ['kind' => 'nalog', 'file' => $fid]);
-        } else {
-            log_activity('file_uploaded', (int) $project['id'], (int) $nalog['id'], ['kind' => 'nalog_pdf', 'file' => $fid]);
-        }
-        db()->commit();
-    } catch (Throwable $ex) {
-        if (db()->inTransaction()) {
-            db()->rollBack();
-        }
-        delete_stored($pdf);
-        throw $ex;
-    }
-    rule_maybe_complete_project((int) $project['id']);
-}
-
-/** Postavlja (ili menja) sliku lokacije PRE. */
-function set_lokacija_photo(array $project, array $upload, array $user): void
-{
-    $img = store_image($upload);
     $old = q_all("SELECT * FROM files WHERE project_id = ? AND kind = 'lokacija_pre'", [$project['id']]);
-    try {
-        db()->beginTransaction();
-        $fid = insert_file((int) $project['id'], null, 'lokacija_pre', $img, $user['id']);
-        q("DELETE FROM files WHERE project_id = ? AND kind = 'lokacija_pre' AND id <> ?", [$project['id'], $fid]);
-        log_activity('file_uploaded', (int) $project['id'], null, ['kind' => 'lokacija_pre', 'file' => $fid, 'replaced' => count($old)]);
-        db()->commit();
-    } catch (Throwable $ex) {
-        if (db()->inTransaction()) {
-            db()->rollBack();
-        }
-        delete_stored($img);
-        throw $ex;
+    if (!attach_temp_files([$fileId], (int) $project['id'], ['kind' => 'lokacija_pre'], (int) $user['id'])) {
+        throw new RuleError('Slika nije pronađena — pošalji je ponovo.');
     }
     foreach ($old as $f) {
+        q('DELETE FROM files WHERE id = ?', [$f['id']]);
         delete_stored($f);
     }
-}
-
-/** Raspoređivanje u nedelju (plan) + obaveštenje hali i terenu. */
-function set_project_week(array $project, ?string $week, array $user): void
-{
-    if ($project['install_week_start'] === $week) {
-        return;
-    }
-    q('UPDATE projects SET install_week_start = ? WHERE id = ?', [$week, $project['id']]);
-    log_activity('project_updated', (int) $project['id'], null, ['install_week_start' => ['old' => $project['install_week_start'], 'new' => $week]]);
-    if ($week && $project['status'] === 'aktivan') {
-        notify_week_scheduled($project, $week);
-    }
-}
-
-function notify_week_scheduled(array $project, string $week): void
-{
-    $mon = new DateTimeImmutable($week);
-    notify(['hala', 'teren'], 'Raspoređeno: ' . project_ref($project) . ' — montaža ' . week_label($mon)
-        . ($project['deadline'] ? ', rok ' . fmt_dm($project['deadline']) : ''), (int) $project['id']);
+    log_activity('file_uploaded', (int) $project['id'], null, ['kind' => 'lokacija_pre', 'file' => $fileId]);
 }
