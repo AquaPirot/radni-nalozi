@@ -16,10 +16,10 @@ $moving = $visit && $visit['start_date'];
         <select class="input" name="team_id"><option value="">— nije određena —</option>
             <?php foreach ($teams as $t): ?><option value="<?= (int) $t['id'] ?>"<?= (int) $v['team_id'] === (int) $t['id'] ? ' selected' : '' ?>><?= e($t['name']) ?></option><?php endforeach; ?>
         </select></label>
-    <div class="grid3">
+    <div class="grid3 when">
         <label class="field"><span>Početak</span><input class="input mono" type="date" name="start_date" value="<?= e($v['start_date']) ?>"></label>
         <label class="field"><span>Vreme</span><input class="input mono" type="time" name="start_time" value="<?= e(substr((string) $v['start_time'], 0, 5)) ?>"></label>
-        <label class="field"><span>Trajanje (dana)</span><input class="input mono" type="number" name="days" min="1" max="30" value="<?= (int) $v['days'] ?>"></label>
+        <label class="field"><span>Trajanje u danima</span><input class="input mono" type="number" inputmode="numeric" name="days" min="1" max="30" value="<?= (int) $v['days'] ?>"></label>
     </div>
     <p class="small muted">Višednevna montaža ide redom, uključujući subotu i nedelju ako ih obuhvata.</p>
     <?php foreach ($overlap as $o): ?><div class="alert warn">Preklapanje: ista ekipa je na <strong><?= e($o['customer_name']) ?></strong> (<?= e(visit_when($o)) ?>).</div><?php endforeach; ?>

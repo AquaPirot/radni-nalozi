@@ -219,31 +219,28 @@
         if (form) gate(form);
     });
 
-    // ══ Tema: tamna → svetla → kao telefon (pamti se na ovom uređaju) ══
-    const THEMES = ['dark', 'light', 'system'];
-    const THEME_NAMES = { dark: 'Tamna tema', light: 'Svetla tema', system: 'Tema kao na telefonu' };
+    // ══ Tema: tamna / svetla / kao telefon (pamti se na ovom uređaju) ══
     function applyTheme(t) {
         document.documentElement.setAttribute('data-theme', t);
         const light = t === 'light' || (t === 'system' && window.matchMedia('(prefers-color-scheme: light)').matches);
         const meta = document.querySelector('meta[name=theme-color]');
         if (meta) meta.content = light ? '#F3F4F1' : '#0E0F11';
-        document.querySelectorAll('[data-theme-toggle]').forEach((b) => { b.title = THEME_NAMES[t]; b.setAttribute('aria-label', THEME_NAMES[t]); });
+        document.querySelectorAll('[data-theme-set]').forEach((b) => b.classList.toggle('on', b.dataset.themeSet === t));
     }
     applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
-    document.querySelectorAll('[data-theme-toggle]').forEach((b) => b.addEventListener('click', () => {
-        const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-        const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
-        try { localStorage.setItem('mz-theme', next); } catch (_) {}
-        applyTheme(next);
-        toastTheme(THEME_NAMES[next]);
+    document.querySelectorAll('[data-theme-set]').forEach((b) => b.addEventListener('click', () => {
+        try { localStorage.setItem('mz-theme', b.dataset.themeSet); } catch (_) {}
+        applyTheme(b.dataset.themeSet);
     }));
-    function toastTheme(msg) {
-        let t = document.querySelector('.toast');
-        if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
-        t.textContent = msg; t.classList.add('show');
-        clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1600);
-    }
     window.matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', () => applyTheme(document.documentElement.getAttribute('data-theme') || 'dark'));
+
+    // ══ Meni u zaglavlju: zatvara se klikom van njega ili na Esc ══
+    document.addEventListener('click', (e) => {
+        document.querySelectorAll('details[data-menu][open]').forEach((d) => { if (!d.contains(e.target)) d.open = false; });
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') document.querySelectorAll('details[data-menu][open]').forEach((d) => { d.open = false; });
+    });
 
     // ══ Rok zadatka: "Bez roka" isključuje datum i vreme ══════
     function syncDeadline(box) {
@@ -506,6 +503,10 @@
         bell.hidden = false;
         bell.classList.toggle('on', on);
         bell.setAttribute('aria-pressed', on ? 'true' : 'false');
+        const st = bell.querySelector('[data-push-state]');
+        if (st) st.textContent = on ? 'uključena' : (Notification.permission === 'denied' ? 'blokirana' : 'isključena');
+        const dot = document.querySelector('[data-push-dot]');
+        if (dot) dot.hidden = on;
         if (banner) banner.hidden = on || dismissed() || Notification.permission === 'denied';
     }
 

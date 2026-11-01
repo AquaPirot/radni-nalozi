@@ -48,7 +48,7 @@ function install_page(string $title, string $body): never
     <meta name="robots" content="noindex">
     <title><?= h($title) ?> — Montaža</title>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="assets/css/montaza.css">
 </head>
 <body class="auth">
 <main class="auth-box">

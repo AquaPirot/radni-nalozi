@@ -747,7 +747,7 @@ a.rcard.static { color: inherit; }
 .problem p { font-size: 15px; }
 .problem .btn { align-self: flex-start; }
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 6px -16px 0; padding: 0 16px; overflow-x: auto; position: sticky; top: 0; z-index: 6; background: var(--bg); }
-.tabs a { padding: 14px 12px; color: var(--muted); font-weight: 600; white-space: nowrap; border-bottom: 3px solid transparent; }
+.tabs a { flex: 1 1 auto; text-align: center; padding: 14px 6px; min-height: 48px; color: var(--muted); font-weight: 600; font-size: 15px; white-space: nowrap; border-bottom: 3px solid transparent; }
 .tabs a.on { color: var(--text); border-bottom-color: var(--accent-fg); }
 .stepper { display: flex; justify-content: space-between; position: relative; margin: 6px 4px; }
 .stepper::before { content: ''; position: absolute; left: 16px; right: 16px; top: 14px; height: 3px; background: var(--track); }
@@ -789,7 +789,8 @@ a.rcard.static { color: inherit; }
 
 /* Slanje fajlova jedan po jedan */
 .uploader { display: flex; flex-direction: column; gap: 10px; }
-.up-head { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+.up-head { display: flex; flex-direction: column; gap: 2px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+.up-head .small { font-weight: 400; }
 .up-list { display: flex; flex-wrap: wrap; gap: 10px; }
 .up-list:empty { display: none; }
 .up-item { position: relative; width: 92px; height: 92px; border-radius: 14px; overflow: hidden; background: var(--surface-3); display: grid; place-items: center; border: 2px solid transparent; }
@@ -893,12 +894,7 @@ input:disabled { opacity: .45; }
 .rcard strong.mono, .tile strong.mono { white-space: nowrap; }
 
 /* ── Tema: dugme i poruka ───────────────────────────────── */
-.theme-btn .ti-light, .theme-btn .ti-system { display: none; }
-:root[data-theme="light"] .theme-btn .ti-dark { display: none; }
-:root[data-theme="light"] .theme-btn .ti-light { display: inline; }
-:root[data-theme="system"] .theme-btn .ti-dark { display: none; }
-:root[data-theme="system"] .theme-btn .ti-system { display: inline; font-weight: 700; font-size: 16px; }
-.toast {
+:root[data-theme="light"] :root[data-theme="light"] :root[data-theme="system"] :root[data-theme="system"] .toast {
     position: fixed; left: 50%; bottom: calc(var(--nav-h) + var(--safe-b) + 24px); z-index: 60;
     transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
     padding: 10px 16px; border-radius: 999px; background: var(--text); color: var(--bg); font-weight: 600; font-size: 15px;
@@ -963,3 +959,41 @@ input:disabled { opacity: .45; }
     box-shadow: 0 8px 24px rgba(0, 0, 0, .3); transform: translateY(-140%); transition: transform .2s;
 }
 .net-banner.show { transform: none; }
+
+/* ── Meni u zaglavlju (nalog, obaveštenja, tema, odjava) ── */
+.menu { position: relative; }
+.menu > summary { list-style: none; cursor: pointer; position: relative; }
+.menu > summary::-webkit-details-marker { display: none; }
+.avatar span { font: 700 18px/1 var(--font); color: var(--text); }
+.menu[open] > .avatar { border-color: var(--accent-fg); }
+.push-dot { position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--warn); border: 2px solid var(--bg); }
+.menu-panel {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 50; width: 272px;
+    display: flex; flex-direction: column; padding: 6px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .35);
+}
+.menu-who { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px 12px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
+.menu-who strong { font-size: 17px; }
+.menu-who span { font-size: 14px; color: var(--muted); }
+.menu-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0 12px; border-radius: 10px; font-size: 16px; color: var(--text); text-align: left; }
+.menu-row .ic { color: var(--muted); }
+.menu-row em { margin-left: auto; font-style: normal; font-size: 14px; color: var(--warn); }
+.menu-row.on em { color: var(--accent-fg); }
+.menu-row:not(.static):hover, a.menu-row.on { background: var(--surface-2); }
+.menu-row.static { min-height: 40px; }
+.theme-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 0 8px 6px; padding: 4px; border-radius: 12px; background: var(--bg); }
+.theme-seg button { min-height: 40px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+.theme-seg button.on { background: var(--text); color: var(--bg); }
+.menu-panel form { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border); }
+
+/* ── Ikonica u liniji teksta (ekipa, broj slika…) ostaje u istom redu ── */
+.small > .ic, .muted > .ic, p > .ic, .vcard > span > .ic { display: inline-block; vertical-align: -2px; margin-right: 4px; }
+
+/* ── Termin: početak i vreme u redu, trajanje ispod ── */
+.grid3.when { grid-template-columns: 1fr 1fr; }
+.grid3.when > :last-child { grid-column: 1 / -1; }
+
+/* ── Naplata u formi: iznos i ko naplaćuje jedno ispod drugog ── */
+.grid2.pay-amount { grid-template-columns: 1fr; }
+.grid2.pay-amount .amount input { width: 100%; }

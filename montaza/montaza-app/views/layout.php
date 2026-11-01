@@ -37,7 +37,7 @@ if ($focus) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset('css/montaza.css')) ?>">
 </head>
 <body>
 <div class="app<?= count($nav) > 1 ? ' has-nav' : '' ?>">
@@ -47,16 +47,25 @@ if ($focus) {
         <h1 class="h1"><?= e($title ?? '') ?></h1>
         <div class="top-actions">
             <?= $topExtra ?? '' ?>
-            <?php if (!$focus): ?>
-            <button class="icon-btn theme-btn" type="button" data-theme-toggle aria-label="Tema" title="Tema"><span class="ti-dark"><?= icon('moon') ?></span><span class="ti-light"><?= icon('sun') ?></span><span class="ti-system mono">A</span></button>
-            <button class="icon-btn push-btn" type="button" data-push-toggle hidden aria-label="Obaveštenja na ovom telefonu"><?= icon('bell') ?></button>
-            <?php if ($u && $u['role'] === 'vlasnik'): ?>
-                <a class="icon-btn<?= $tab === 'podesavanja' ? ' on' : '' ?>" href="<?= e(url('podesavanja')) ?>" aria-label="Podešavanja"><?= icon('podesavanja') ?></a>
-            <?php endif; ?>
-            <form method="post" action="<?= e(url() . 'api/logout.php') ?>">
-                <?= csrf_field() ?>
-                <button class="icon-btn" type="submit" aria-label="Odjava" title="Odjava — <?= e($u['name'] ?? '') ?>"><?= icon('logout') ?></button>
-            </form>
+            <?php if (!$focus && $u): ?>
+            <details class="menu" data-menu>
+                <summary class="icon-btn avatar" aria-label="Meni — <?= e($u['name']) ?>"><span><?= e(mb_strtoupper(mb_substr($u['name'], 0, 1))) ?></span><i class="push-dot" data-push-dot hidden></i></summary>
+                <div class="menu-panel" role="menu">
+                    <div class="menu-who"><strong><?= e($u['name']) ?></strong><span><?= e(ROLE_LABELS[$u['role']] ?? $u['role']) ?></span></div>
+                    <button class="menu-row" type="button" data-push-toggle hidden><?= icon('bell', 20) ?><span>Obaveštenja</span><em data-push-state>isključena</em></button>
+                    <div class="menu-row static"><?= icon('sun', 20) ?><span>Tema</span></div>
+                    <div class="theme-seg" role="group" aria-label="Tema">
+                        <button type="button" data-theme-set="dark">Tamna</button><button type="button" data-theme-set="light">Svetla</button><button type="button" data-theme-set="system">Kao telefon</button>
+                    </div>
+                    <?php if ($u['role'] === 'vlasnik'): ?>
+                        <a class="menu-row<?= $tab === 'podesavanja' ? ' on' : '' ?>" href="<?= e(url('podesavanja')) ?>"><?= icon('podesavanja', 20) ?><span>Podešavanja</span></a>
+                    <?php endif; ?>
+                    <form method="post" action="<?= e(url() . 'api/logout.php') ?>">
+                        <?= csrf_field() ?>
+                        <button class="menu-row" type="submit"><?= icon('logout', 20) ?><span>Odjava</span></button>
+                    </form>
+                </div>
+            </details>
             <?php endif; ?>
         </div>
     </header>
@@ -98,6 +107,6 @@ if ($focus) {
     </nav>
     <?php endif; ?>
 </div>
-<script src="<?= e(asset('js/app.js')) ?>" defer></script>
+<script src="<?= e(asset('js/montaza.js')) ?>" defer></script>
 </body>
 </html>

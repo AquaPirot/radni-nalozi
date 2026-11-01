@@ -1,12 +1,12 @@
 // MONTAŽA — service worker: samo ikonica + keš statike (offline rad nije cilj v1).
 // Stranice uvek idu na mrežu (podaci moraju biti sveži); bez mreže → offline.html.
-const CACHE = 'montaza-v4';
+const CACHE = 'montaza-v5';
+// Samo ono što treba stranici „nema veze". CSS/JS stranice dolaze sa ?v=… (verzija fajla),
+// pa se u keš traže po PUNOJ adresi — nova verzija nikad ne dobije stari fajl.
 const STATIC = [
   '/offline.html',
-  '/assets/css/app.css',
-  '/assets/js/app.js',
+  '/assets/css/montaza.css',
   '/assets/icons/icon-192.png',
-  '/assets/icons/icon-512.png',
   '/assets/icons/badge-72.png',
 ];
 
@@ -34,13 +34,23 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   if (url.pathname.startsWith('/assets/')) {
-    // stale-while-revalidate za CSS/JS/ikone
+    // Mreža prvo; keš samo kad nema veze. Tačna adresa (sa ?v=), nikad „slična".
     e.respondWith(
-      caches.open(CACHE).then(async (c) => {
-        const hit = await c.match(req, { ignoreSearch: true });
-        const net = fetch(req).then((res) => { if (res.ok) c.put(req, res.clone()); return res; }).catch(() => hit);
-        return hit || net;
-      })
+      fetch(req)
+        .then((res) => {
+          if (res.ok && url.search) {
+            const copy = res.clone();
+            caches.open(CACHE).then(async (c) => {
+              for (const old of await c.keys()) {
+                const u = new URL(old.url);
+                if (u.pathname === url.pathname && u.search && u.search !== url.search) c.delete(old);
+              }
+              c.put(req, copy);
+            });
+          }
+          return res;
+        })
+        .catch(() => caches.match(req))
     );
   }
 });

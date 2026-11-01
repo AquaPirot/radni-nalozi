@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset('css/montaza.css')) ?>">
 </head>
 <body class="auth">
 <main class="auth-box">
@@ -43,6 +43,6 @@
         <button class="btn primary block" type="submit">Prijavi se</button>
     </form>
 </main>
-<script src="<?= e(asset('js/app.js')) ?>" defer></script>
+<script src="<?= e(asset('js/montaza.js')) ?>" defer></script>
 </body>
 </html>

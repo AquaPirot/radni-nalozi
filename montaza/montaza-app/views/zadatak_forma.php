@@ -21,13 +21,12 @@ $err = fn(string $k) => isset($errors[$k]) ? '<div class="field-err">' . e($erro
         <textarea class="input" name="description" rows="3" placeholder="Šta tačno, gde, koliko…"><?= e($v['description']) ?></textarea></label>
 
     <div class="field">
-        <span>Rok</span>
+        <span>Rok <span class="small muted">(vreme je opciono)</span></span>
         <div class="btn-row" data-deadline>
             <input class="input mono grow" type="date" name="due_date" value="<?= e((string) $v['due_date']) ?>" aria-label="Datum">
             <input class="input mono" type="time" name="due_time" value="<?= e($v['due_time'] ? substr((string) $v['due_time'], 0, 5) : '') ?>" aria-label="Vreme (opciono)" style="max-width:8.5rem">
         </div>
-        <label class="check row"><input type="checkbox" name="no_deadline" value="1"<?= !empty($v['no_deadline']) && !$v['due_date'] ? ' checked' : '' ?>><span class="box"></span><span>Bez roka</span></label>
-        <span class="small muted">Vreme je opciono. Bez roka označi samo kad zaista nije bitno kada.</span>
+        <label class="check"><input type="checkbox" name="no_deadline" value="1"<?= !empty($v['no_deadline']) && !$v['due_date'] ? ' checked' : '' ?>><span class="box"></span><span>Bez roka <span class="small muted">— samo kad zaista nije bitno kada</span></span></label>
         <?= $err('due_date') ?>
     </div>
 
