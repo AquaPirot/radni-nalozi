@@ -24,6 +24,12 @@ if (is_post()) {
                     setting_set($k, (string) $v);
                 }
             }
+            $cat = array_values(array_unique(array_filter(array_map(fn($l) => mb_substr(trim($l), 0, 80), explode("\n", str_replace("\r", '', (string) ($_POST['item_catalog'] ?? '')))))));
+            if (!$cat) {
+                $errors[] = 'Spisak stavki ne sme biti prazan.';
+            } else {
+                setting_set('item_catalog', implode("\n", array_slice($cat, 0, 30)));
+            }
             $token = trim((string) ($_POST['telegram_bot_token'] ?? ''));
             if ($token !== '') {
                 if (!preg_match('/^\d+:[A-Za-z0-9_-]{30,}$/', $token)) {

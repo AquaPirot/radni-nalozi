@@ -30,9 +30,9 @@ function report_data(DateTimeImmutable $start, DateTimeImmutable $end): array
     $r['byReason'] = $byReason;
 
     $r['itemSpeed'] = q_all(
-        "SELECT kind, AVG(TIMESTAMPDIFF(HOUR, started_at, completed_at)) / 24 AS days, COUNT(*) AS n
+        "SELECT kind, label, AVG(TIMESTAMPDIFF(HOUR, started_at, completed_at)) / 24 AS days, COUNT(*) AS n
          FROM project_items WHERE status = 'zavrseno' AND imported = 0 AND started_at IS NOT NULL AND kind <> 'nalog'
-           AND completed_at >= ? AND completed_at < ? GROUP BY kind ORDER BY days DESC", [$S, $E]);
+           AND completed_at >= ? AND completed_at < ? GROUP BY kind, label ORDER BY days DESC", [$S, $E]);
 
     $r['carry'] = q_all(
         "SELECT * FROM projects WHERE status <> 'otkazan' AND created_at < ? AND (completed_at IS NULL OR completed_at >= ?)

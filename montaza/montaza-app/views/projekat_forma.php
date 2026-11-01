@@ -1,4 +1,4 @@
-<?php /** @var bool $isNew @var ?array $project @var array $v @var array $errors @var array $done */
+<?php /** @var bool $isNew @var ?array $project @var array $v @var array $errors @var array $done @var array $catalog */
 $err = fn(string $k) => isset($errors[$k]) ? '<div class="field-err">' . e($errors[$k]) . '</div>' : '';
 ?>
 <?php if ($errors): ?><div class="alert warn" role="alert">Proveri označena polja.</div><?php endif; ?>
@@ -20,18 +20,21 @@ $err = fn(string $k) => isset($errors[$k]) ? '<div class="field-err">' . e($erro
     <label class="field"><span>Adresa montaže</span><input class="input" name="address" value="<?= e((string) $v['address']) ?>" placeholder="Ulica i broj"></label>
 
     <div class="grid2">
-        <label class="field"><span>Dan montaže</span><input class="input mono" type="date" name="install_date" value="<?= e((string) $v['install_date']) ?>"><?= $err('install_date') ?></label>
+        <label class="field"><span data-only="novi zapocet">Dan montaže</span><span data-only="reklamacija">Dan izlaska</span><input class="input mono" type="date" name="install_date" value="<?= e((string) $v['install_date']) ?>"><?= $err('install_date') ?></label>
         <label class="field"><span>Vreme</span><input class="input mono" type="time" name="install_time" value="<?= e($v['install_time'] ? substr((string) $v['install_time'], 0, 5) : '') ?>"></label>
     </div>
     <p class="small muted" style="margin-top:-6px">Dan može i kasnije — sa strane projekta.</p>
 
-    <?= uploader('nalog_id', $isNew ? 'Radni nalog (PDF)' : 'Nova verzija naloga (PDF)', false, 'pdf', false, 'u njemu su svi detalji posla') ?>
+    <div data-only="novi zapocet"><?= uploader('nalog_id', $isNew ? 'Radni nalog (PDF)' : 'Nova verzija naloga (PDF)', false, 'pdf', false, 'u njemu su svi detalji posla') ?></div>
 
-    <div data-only="novi zapocet" class="toggles">
-        <div class="toggle-row">
-            <div><div>Čelična konstrukcija</div><div class="small muted">dodaje stavku „Čelik"</div></div>
-            <label class="switch"><input type="checkbox" name="has_steel" value="1"<?= !empty($v['has_steel']) ? ' checked' : '' ?> aria-label="Čelična konstrukcija"><i></i></label>
+    <div class="field" data-only="novi zapocet">
+        <span>Šta se radi u hali <span class="small muted">— označi</span></span>
+        <div class="chips work-chips">
+            <?php foreach ($catalog as $w): ?>
+                <label class="chip-check"><input type="checkbox" name="works[]" value="<?= e($w) ?>"<?= in_array($w, $v['works'] ?? [], true) ? ' checked' : '' ?>><span><?= e($w) ?></span></label>
+            <?php endforeach; ?>
         </div>
+        <span class="small muted">Nalog i Montaža se dodaju sami. Spisak menjaš u Podešavanjima.</span>
     </div>
     <label class="field" data-only="reklamacija"><span>Reklamacija za projekat</span>
         <select class="input" name="parent_project_id">
@@ -39,10 +42,11 @@ $err = fn(string $k) => isset($errors[$k]) ? '<div class="field-err">' . e($erro
             <?php foreach ($done as $d): ?><option value="<?= (int) $d['id'] ?>"<?= (int) ($v['parent_project_id'] ?? 0) === (int) $d['id'] ? ' selected' : '' ?>><?= e($d['customer_name'] . ($d['city'] ? ' · ' . $d['city'] : '') . ' · ' . $d['code']) ?></option><?php endforeach; ?>
         </select></label>
 
-    <?php if ($isNew): ?><?= uploader('lokacija_id', 'Slika mesta montaže (PRE)', false, 'foto', false, 'opciono') ?><?php endif; ?>
+    <?php if ($isNew): ?><div data-only="novi zapocet"><?= uploader('lokacija_id', 'Slika mesta montaže (PRE)', false, 'foto', false, 'opciono') ?></div><?php endif; ?>
 
-    <label class="field"><span>Napomena <span class="small muted">(opciono)</span></span>
-        <textarea class="input" name="description" rows="2" placeholder="npr. pristup kamionom samo pre 9h"><?= e((string) $v['description']) ?></textarea></label>
+    <label class="field"><span data-only="novi zapocet">Napomena <span class="small muted">(opciono)</span></span><span data-only="reklamacija">Opis problema</span>
+        <textarea class="input" name="description" rows="3" placeholder="npr. curi na spoju kod oluka, motor ne reaguje…"><?= e((string) $v['description']) ?></textarea><?= $err('description') ?></label>
+    <?php if ($isNew): ?><div data-only="reklamacija"><?= uploader('problem_id', 'Slika problema', true, 'foto', false, 'opciono') ?></div><?php endif; ?>
 
     <button class="btn primary block" type="submit"><?= $isNew ? 'Otvori projekat' : 'Sačuvaj' ?></button>
 </form>

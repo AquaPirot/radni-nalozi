@@ -28,21 +28,21 @@ if (is_post()) {
     $in = project_input($_POST);
     $errors = project_validate($in);
     if (!$errors) {
-        $id = project_save($project, $in, $user, posted_ids('nalog_id'), posted_ids('lokacija_id'));
+        $id = project_save($project, $in, $user, posted_ids('nalog_id'), posted_ids('lokacija_id'), posted_ids('problem_id'));
         flash('ok', $isNew ? 'Projekat je otvoren — hala i teren dobijaju obaveštenje.' : 'Sačuvano.');
         redirect(url('projekat', ['id' => $id]));
     }
     $v = $in;
     $v['install_date'] = $in['install_raw'];
 } elseif ($isNew) {
-    $v = ['type' => 'novi', 'customer_name' => '', 'phone' => '', 'city' => '', 'address' => '', 'has_steel' => false,
+    $v = ['type' => 'novi', 'customer_name' => '', 'phone' => '', 'city' => '', 'address' => '', 'works' => [],
           'install_date' => '', 'install_time' => null, 'description' => '', 'parent_project_id' => (int) ($_GET['parent'] ?? 0) ?: null];
     if ($v['parent_project_id'] && ($par = load_project($v['parent_project_id']))) {
         $v = array_merge($v, ['type' => 'reklamacija', 'customer_name' => $par['customer_name'], 'phone' => (string) $par['phone'], 'city' => (string) $par['city'], 'address' => (string) $par['address']]);
     }
 } else {
     $v = $project;
-    $v['has_steel'] = (bool) $project['has_steel'];
+    $v['works'] = project_works(items_for([(int) $project['id']])[(int) $project['id']] ?? []);
 }
 $done = q_all("SELECT id, code, customer_name, city FROM projects WHERE status = 'zavrsen' OR id = ? ORDER BY completed_at DESC LIMIT 200", [(int) ($v['parent_project_id'] ?? 0)]);
 
@@ -55,5 +55,6 @@ view('projekat_forma', [
     'v'        => $v,
     'errors'   => $errors,
     'done'     => $done,
+    'catalog'  => array_values(array_unique(array_merge(item_catalog(), $v['works'] ?? []))),
     'topExtra' => '<a class="icon-btn" href="' . e($isNew ? url('projekti') : url('projekat', ['id' => $project['id']])) . '" aria-label="Zatvori">' . icon('close') . '</a>',
 ]);

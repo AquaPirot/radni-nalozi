@@ -22,7 +22,7 @@
 <div class="cards-grid">
 <?php foreach ($groups as $g): ?>
     <section class="group">
-        <header class="group-head"><span class="<?= $g['title'] === 'MONTAŽA KASNI' ? 'warn' : '' ?>"><?= e($g['title']) ?></span><span><?= count($g['items']) ?></span></header>
+        <header class="group-head"><span class="<?= ['MONTAŽA KASNI' => 'warn', 'OVE NEDELJE' => 'today', 'SLEDEĆE NEDELJE' => 'tomorrow'][$g['title']] ?? '' ?>"><?= e($g['title']) ?></span><span><?= count($g['items']) ?></span></header>
         <?php foreach ($g['items'] as $b) { echo project_card($b); } ?>
     </section>
 <?php endforeach; ?>

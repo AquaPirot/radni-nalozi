@@ -59,7 +59,7 @@ function installs_between(string $from, string $to): array
 function install_line(array $b, bool $withDay = false): string
 {
     $p = $b['p'];
-    $ready = ready_for_field($b['items']) ? '' : ' — NIJE SPREMNO (' . mb_strtolower(ITEM_LABELS[current_item($b['items'])['kind']] ?? '') . ')';
+    $ready = ready_for_field($b['items']) ? '' : ' — NIJE SPREMNO (' . mb_strtolower(item_label(current_item($b['items']) ?? ['kind' => ''])) . ')';
     return ($withDay ? install_when($p, false) : ($p['install_time'] ? substr((string) $p['install_time'], 0, 5) : 'ceo dan')) . ' · '
         . project_ref($p) . ($p['address'] ? ', ' . $p['address'] : '') . ($p['phone'] ? ' · ' . $p['phone'] : '') . $ready;
 }

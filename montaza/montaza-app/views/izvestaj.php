@@ -27,7 +27,7 @@ $maxReason = $byReason ? max($byReason) : 1;
     <section class="stack">
         <h2 class="sec-head"><span>KOLIKO TRAJE (PROSEK DANA)</span></h2>
         <div class="list">
-            <?php foreach ($itemSpeed as $s): ?><div class="list-row"><span><?= e(ITEM_LABELS[$s['kind']]) ?> <span class="muted small">(<?= (int) $s['n'] ?>)</span></span><span class="mono"><?= e(fmt_days($s['days'])) ?></span></div><?php endforeach; ?>
+            <?php foreach ($itemSpeed as $s): ?><div class="list-row"><span><?= e(item_label($s)) ?> <span class="muted small">(<?= (int) $s['n'] ?>)</span></span><span class="mono"><?= e(fmt_days($s['days'])) ?></span></div><?php endforeach; ?>
         </div>
     </section>
 <?php endif; ?>

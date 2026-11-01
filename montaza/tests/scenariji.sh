@@ -33,7 +33,8 @@ done_item() { # done_item KOLAČIĆ ITEM brojSlika
 echo "1. Vlasnik otvara projekat: kupac, telefon, adresa, dan montaže, PDF nalog, slika lokacije"
 N=$(up v.txt n.pdf pdf); L=$(up v.txt f.jpg)
 post v.txt "?p=novi" -d "type=novi" --data-urlencode "customer_name=Petrović $TAG" -d "phone=064 123 4567&city=Pirot" --data-urlencode "address=Kneza Miloša 10" \
-  -d "install_date=$(D '+3 days')&install_time=08:30&has_steel=1&nalog_id[]=$N&lokacija_id[]=$L" >/dev/null
+  -d "install_date=$(D '+3 days')&install_time=08:30&nalog_id[]=$N&lokacija_id[]=$L" \
+  --data-urlencode "works[]=Čelik" --data-urlencode "works[]=Aluminijum" --data-urlencode "works[]=Cerada" --data-urlencode "works[]=Pakovanje" >/dev/null
 P=$(sql "SELECT id FROM projects WHERE customer_name='Petrović $TAG'")
 ok "projekat otvoren" "$( [ -n "$P" ] && echo 1)" "1"
 ok "stavke kao v1 (sa čelikom)" "$(sql "SELECT GROUP_CONCAT(kind ORDER BY sort) FROM project_items WHERE project_id=$P")" "nalog,celik,aluminijum,cerada,pakovanje,montaza"
@@ -84,10 +85,15 @@ ok "nestao sa Montaža" "$(page t.txt montaze | grep -c "Petrović $TAG")" "0"
 has "u Završenim" "$(page v.txt "projekti&f=zavrseni" | grep -c "Petrović $TAG")"
 has "u izveštaju" "$(page h.txt izvestaj | grep -c "Petrović $TAG")"
 
-echo "6. Reklamacija vezana za završen projekat"
+echo "6. Reklamacija: opis + slika problema, jedna stavka Servis"
 post v.txt "?p=novi" -d "type=reklamacija&parent_project_id=$P" --data-urlencode "customer_name=Petrović $TAG" -d "city=Pirot" >/dev/null
+ok "bez opisa problema → odbijeno" "$(sql "SELECT COUNT(*) FROM projects WHERE parent_project_id=$P")" "0"
+PR=$(up v.txt f.jpg)
+post v.txt "?p=novi" -d "type=reklamacija&parent_project_id=$P" --data-urlencode "customer_name=Petrović $TAG" -d "city=Pirot&problem_id[]=$PR" --data-urlencode "description=curi kod oluka" >/dev/null
 R=$(sql "SELECT id FROM projects WHERE parent_project_id=$P")
-ok "stavke reklamacije" "$(sql "SELECT GROUP_CONCAT(kind ORDER BY sort) FROM project_items WHERE project_id=$R")" "dijagnoza,materijal,servis"
+ok "reklamacija ima samo Servis" "$(sql "SELECT GROUP_CONCAT(kind ORDER BY sort) FROM project_items WHERE project_id=$R")" "servis"
+ok "slika problema" "$(sql "SELECT CONCAT(kind,'/',purpose) FROM files WHERE id=$PR")" "foto/nedostatak"
+has "status: Reklamacija — čeka servis" "$(page t.txt montaze | grep -c 'Reklamacija — čeka servis\|Petrović')"
 has "u filteru Reklamacije" "$(page v.txt "projekti&f=reklamacije" | grep -c "Petrović $TAG")"
 has "original pokazuje reklamaciju" "$(page v.txt "projekat&id=$P" | grep -c 'Reklamacija <span')"
 
@@ -103,7 +109,20 @@ T=$(curl -s -b t.txt "$B/?p=projekat&id=$R" | tok)
 for i in 1 2; do curl -s -b t.txt -c t.txt -o /dev/null "$B/api/akcija.php" --data-urlencode "_csrf=$T" -d "_once=dupli-$TAG&action=project_comment&id=$R" --data-urlencode "body=dupli $TAG" --data-urlencode "back=/?p=projekti"; done
 ok "dupli klik ne pravi dupli komentar" "$(sql "SELECT COUNT(*) FROM project_comments WHERE body='dupli $TAG'")" "1"
 
-echo "8. Stare adrese vode na nove ekrane"
+echo "8. Stavke po izboru (giljotine bez cerade) i izmena izbora"
+post v.txt "?p=novi" -d "type=novi" --data-urlencode "customer_name=Giljotine $TAG" -d "city=Niš" --data-urlencode "works[]=Giljotina" --data-urlencode "works[]=Pakovanje" >/dev/null
+G=$(sql "SELECT id FROM projects WHERE customer_name='Giljotine $TAG'")
+ok "samo izabrane stavke" "$(sql "SELECT GROUP_CONCAT(COALESCE(label, kind) ORDER BY sort) FROM project_items WHERE project_id=$G")" "nalog,Giljotina,pakovanje,montaza"
+act h.txt item_done "$(sql "SELECT id FROM project_items WHERE project_id=$G AND label='Giljotina'")"
+post v.txt "?p=izmeni&id=$G" -d "type=novi" --data-urlencode "customer_name=Giljotine $TAG" -d "city=Niš" --data-urlencode "works[]=Staklo" --data-urlencode "works[]=Pakovanje" >/dev/null
+ok "izmena: dodato Staklo, završena Giljotina ostaje" "$(sql "SELECT GROUP_CONCAT(COALESCE(label, kind) ORDER BY sort) FROM project_items WHERE project_id=$G")" "nalog,Staklo,Giljotina,pakovanje,montaza"
+has "kartica: Giljotina na traci" "$(page v.txt projekti | grep -A8 "Giljotine $TAG" | grep -c 'Giljotina: Završeno')"
+G2=$(sql "SELECT id FROM projects WHERE customer_name='Giljotine $TAG'"); T=$(curl -s -b v.txt "$B/?p=izmeni&id=$G2" | tok)
+curl -s -b v.txt -c v.txt -o /dev/null "$B/?p=izmeni&id=$G2" --data-urlencode "_csrf=$T" -d "type=novi" --data-urlencode "customer_name=Giljotine $TAG" --data-urlencode "address=https://maps.app.goo.gl/abc123" -d "city=Niš" --data-urlencode "works[]=Staklo"
+has "adresa-link: Navigacija vodi na link" "$(page t.txt "projekat&id=$G2" | grep -c 'href="https://maps.app.goo.gl/abc123"')"
+ok "link se ne ispisuje kao adresa" "$(page t.txt "projekat&id=$G2" | grep -c '<span>https://maps')" "0"
+
+echo "9. Stare adrese vode na nove ekrane"
 ok "?p=danas → projekti" "$(curl -s -b t.txt "$B/?p=danas" | grep -c '<h1 class="h1">Projekti')" "1"
 ok "?p=plan → montaže" "$(curl -s -b t.txt "$B/?p=plan" | grep -c '<h1 class="h1">Montaže')" "1"
 

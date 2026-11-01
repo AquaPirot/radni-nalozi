@@ -11,7 +11,7 @@ if (!$b) {
     return;
 }
 $p = $b['p'];
-$photos = q_all("SELECT f.*, i.kind AS item_kind FROM files f LEFT JOIN project_items i ON i.id = f.item_id
+$photos = q_all("SELECT f.*, i.kind AS item_kind, i.label AS item_label FROM files f LEFT JOIN project_items i ON i.id = f.item_id
                  WHERE f.project_id = ? AND f.pending = 0 AND f.kind IN ('foto','lokacija_pre','posle')
                  ORDER BY f.created_at DESC, f.id DESC", [$id]);
 $photoCount = [];

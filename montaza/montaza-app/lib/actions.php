@@ -45,7 +45,7 @@ function project_input(array $post): array
         'phone'         => trim((string) ($post['phone'] ?? '')),
         'city'          => trim((string) ($post['city'] ?? '')),
         'address'       => trim((string) ($post['address'] ?? '')),
-        'has_steel'     => !empty($post['has_steel']),
+        'works'         => array_slice(array_values(array_unique(array_filter(array_map(fn($w) => mb_substr(trim((string) $w), 0, 80), (array) ($post['works'] ?? []))))), 0, 20),
         'install_date'  => parse_date($post['install_date'] ?? ''),
         'install_raw'   => trim((string) ($post['install_date'] ?? '')),
         'install_time'  => parse_time($post['install_time'] ?? ''),
@@ -62,6 +62,9 @@ function project_validate(array $in): array
     } elseif (mb_strlen($in['customer_name']) > 150) {
         $err['customer_name'] = 'Predugačko.';
     }
+    if ($in['type'] === 'reklamacija' && $in['description'] === '') {
+        $err['description'] = 'Opiši problem.';
+    }
     if ($in['install_raw'] !== '' && !$in['install_date']) {
         $err['install_date'] = 'Neispravan datum.';
     }
@@ -69,36 +72,26 @@ function project_validate(array $in): array
 }
 
 /** Novi ili izmena. Vraća id. $nalogIds / $lokIds: već poslati fajlovi. */
-function project_save(?array $project, array $in, array $user, array $nalogIds, array $lokIds): int
+function project_save(?array $project, array $in, array $user, array $nalogIds, array $lokIds, array $problemIds = []): int
 {
     if ($user['role'] !== 'vlasnik') {
         throw new RuleError('Projekte otvara i menja vlasnik.');
     }
-    $id = in_tx(function () use ($project, $in, $user, $nalogIds, $lokIds) {
+    $id = in_tx(function () use ($project, $in, $user, $nalogIds, $lokIds, $problemIds) {
         $cols = [$in['type'], $in['customer_name'], $in['phone'] ?: null, $in['city'] ?: null, $in['address'] ?: null,
-                 (int) $in['has_steel'], $in['install_date'], $in['install_date'] ? $in['install_time'] : null, $in['description'] ?: null,
+                 (int) in_array('Čelik', $in['works'], true), $in['install_date'], $in['install_date'] ? $in['install_time'] : null, $in['description'] ?: null,
                  $in['type'] === 'reklamacija' ? $in['parent_project_id'] : null];
         if (!$project) {
             q('INSERT INTO projects (code, type, customer_name, phone, city, address, has_steel, install_date, install_time, description, parent_project_id, status, created_by)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'aktivan\', ?)', array_merge([next_project_code()], $cols, [$user['id']]));
             $id = (int) db()->lastInsertId();
-            foreach (item_template($in['type'], $in['has_steel']) as [$kind, $resp, $sort]) {
-                q('INSERT INTO project_items (project_id, kind, sort, responsible) VALUES (?, ?, ?, ?)', [$id, $kind, $sort, $resp]);
-            }
+            sync_items($id, $in['type'], $in['works']);
             log_activity('project_created', $id);
         } else {
             $id = (int) $project['id'];
             q('UPDATE projects SET type = ?, customer_name = ?, phone = ?, city = ?, address = ?, has_steel = ?, install_date = ?, install_time = ?, description = ?, parent_project_id = ? WHERE id = ?',
                 array_merge($cols, [$id]));
-            // čelik naknadno dodat / uklonjen (samo dok nije započet)
-            if ($in['type'] !== 'reklamacija') {
-                $steel = q_one("SELECT * FROM project_items WHERE project_id = ? AND kind = 'celik'", [$id]);
-                if ($in['has_steel'] && !$steel && q_val("SELECT 1 FROM project_items WHERE project_id = ? AND kind = 'aluminijum'", [$id])) {
-                    q("INSERT INTO project_items (project_id, kind, sort, responsible) VALUES (?, 'celik', 20, 'hala')", [$id]);
-                } elseif (!$in['has_steel'] && $steel && $steel['status'] === 'ceka') {
-                    q('DELETE FROM project_items WHERE id = ?', [$steel['id']]);
-                }
-            }
+            sync_items($id, $in['type'], $in['works']);
             log_activity('project_updated', $id);
         }
         if ($nalogIds && attach_temp_files($nalogIds, $id, ['kind' => 'nalog_pdf'], (int) $user['id'])) {
@@ -106,6 +99,7 @@ function project_save(?array $project, array $in, array $user, array $nalogIds, 
             log_activity('nalog_uploaded', $id);
         }
         attach_temp_files($lokIds, $id, ['kind' => 'lokacija_pre'], (int) $user['id']);
+        attach_temp_files($problemIds, $id, ['kind' => 'foto', 'purpose' => 'nedostatak'], (int) $user['id']);
         return $id;
     });
 
@@ -198,7 +192,7 @@ function item_start(int $id, array $user): void
         q("UPDATE project_items SET status = 'u_toku', started_at = COALESCE(started_at, NOW()) WHERE id = ?", [$id]);
         return $it;
     });
-    log_activity('item_started', (int) $it['project_id'], $id, ['kind' => $it['kind']]);
+    log_activity('item_started', (int) $it['project_id'], $id, ['kind' => $it['kind'], 'label' => item_label($it)]);
 }
 
 /** Završetak stavke sa slikama ($fotoIds: već poslate). */
@@ -223,7 +217,7 @@ function item_complete(int $id, array $user, string $note, array $fotoIds): void
         q("UPDATE project_items SET status = 'zavrseno', started_at = COALESCE(started_at, NOW()), completed_at = NOW(), completed_by = ?, note = ? WHERE id = ?",
             [$user['id'], $note !== '' ? mb_substr($note, 0, 2000) : null, $id]);
         q('UPDATE stoppages SET resolved_at = NOW(), resolved_by = ? WHERE item_id = ? AND resolved_at IS NULL', [$user['id'], $id]);
-        log_activity('item_completed', (int) $p['id'], $id, ['kind' => $it['kind'], 'note' => $note]);
+        log_activity('item_completed', (int) $p['id'], $id, ['kind' => $it['kind'], 'label' => item_label($it), 'note' => $note]);
         $open = (int) q_val("SELECT COUNT(*) FROM project_items WHERE project_id = ? AND status <> 'zavrseno'", [$p['id']]);
         if ($open === 0) {
             q("UPDATE projects SET status = 'zavrsen', completed_at = NOW() WHERE id = ?", [$p['id']]);
@@ -233,7 +227,7 @@ function item_complete(int $id, array $user, string $note, array $fotoIds): void
         return [$it, $p];
     });
 
-    $label = ITEM_LABELS[$it['kind']];
+    $label = item_label($it);
     $b = bundle_one((int) $p['id']);
     if ($b['p']['status'] === 'zavrsen') {
         notify(['vlasnik', 'hala', 'teren'], 'ZAVRŠENO: ' . project_ref($p) . ' — ' . $user['name'] . ($note !== '' ? " ($note)" : ''), (int) $p['id']);
@@ -253,7 +247,7 @@ function item_reset(int $id, array $user): void
     $it = q_one('SELECT * FROM project_items WHERE id = ?', [$id]) ?? throw new RuleError('Stavka ne postoji.');
     q("UPDATE project_items SET status = 'ceka', started_at = NULL, completed_at = NULL, completed_by = NULL WHERE id = ?", [$id]);
     q("UPDATE projects SET status = 'aktivan', completed_at = NULL WHERE id = ? AND status = 'zavrsen'", [$it['project_id']]);
-    log_activity('item_reset', (int) $it['project_id'], $id, ['kind' => $it['kind']]);
+    log_activity('item_reset', (int) $it['project_id'], $id, ['kind' => $it['kind'], 'label' => item_label($it)]);
 }
 
 // ── Zastoj (na nivou projekta) ──────────────────────────────

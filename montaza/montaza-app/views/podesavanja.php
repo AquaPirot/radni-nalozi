@@ -63,6 +63,10 @@ $tgOn = $token !== '';
 <form class="stack" method="post" action="<?= e(url('podesavanja')) ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="settings">
+    <h2 class="h2">Stavke koje se biraju u projektu</h2>
+    <label class="field"><span>Jedna po redu, redom kojim se rade <span class="small muted">— Nalog i Montaža se dodaju sami</span></span>
+        <textarea class="input" name="item_catalog" rows="7"><?= e(implode("\n", item_catalog())) ?></textarea></label>
+
     <h2 class="h2">Pravila</h2>
     <div class="grid2">
         <label class="field"><span>Najmanje slika za montažu</span><input class="input mono" name="min_photos_montaza" type="number" min="1" max="20" value="<?= e(setting('min_photos_montaza', '3')) ?>"></label>

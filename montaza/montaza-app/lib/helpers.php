@@ -172,7 +172,7 @@ function uploader(string $name, string $label, bool $multiple = true, string $ty
 function activity_label(array $l): string
 {
     $d = $l['details'] ? (json_decode((string) $l['details'], true) ?: []) : [];
-    $item = fn() => ITEM_LABELS[$d['kind'] ?? ''] ?? ($d['phase'] ?? 'stavka');
+    $item = fn() => $d['label'] ?? ITEM_LABELS[$d['kind'] ?? ''] ?? ($d['phase'] ?? 'stavka');
     return match ($l['action']) {
         'project_created'   => 'Projekat otvoren',
         'project_updated'   => 'Izmenjen projekat',

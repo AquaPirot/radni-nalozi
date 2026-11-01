@@ -20,7 +20,7 @@ if (is_post()) {
     }
     try {
         item_complete((int) $it['id'], $user, $note, posted_ids('foto_ids'));
-        flash('ok', ITEM_LABELS[$it['kind']] . ' — završeno.');
+        flash('ok', item_label($it) . ' — završeno.');
         redirect($back);
     } catch (RuleError $ex) {
         $error = $ex->getMessage();
@@ -30,7 +30,7 @@ $photos = q_all('SELECT * FROM files WHERE item_id = ? AND pending = 0 ORDER BY 
 $min = item_min_photos($it);
 
 view('stavka', [
-    'title'    => ITEM_LABELS[$it['kind']],
+    'title'    => item_label($it),
     'eyebrow'  => mb_strtoupper($p['customer_name'] . ($p['city'] ? ', ' . $p['city'] : '')),
     'tab'      => 'projekti',
     'focus'    => true,

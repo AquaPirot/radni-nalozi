@@ -10,11 +10,11 @@ $form = fn(string $action, string $inner, string $extra = '') => '<form method="
     . csrf_field() . once_field() . '<input type="hidden" name="action" value="' . e($action) . '"><input type="hidden" name="id" value="' . $pid . '"><input type="hidden" name="back" value="' . e(here()) . '">' . $inner . '</form>';
 ?>
 <section class="stack">
-    <div class="p-addr"><?= icon('nav', 18) ?><span><?= e(implode(', ', array_filter([$p['address'], $p['city']])) ?: 'Adresa nije upisana') ?></span></div>
+    <div class="p-addr"><?= icon('nav', 18) ?><span><?= e(address_text($p) ?: 'Adresa nije upisana') ?></span></div>
     <?php if ($p['phone']): ?><div class="p-addr"><?= icon('phone', 18) ?><span class="mono"><?= e($p['phone']) ?></span></div><?php endif; ?>
     <div class="btn-row">
-        <?php if ($tel): ?><a class="btn ghost grow" href="<?= e($tel) ?>"><?= icon('phone', 20) ?>Pozovi</a><?php endif; ?>
-        <?php if ($map): ?><a class="btn ghost grow" href="<?= e($map) ?>" target="_blank" rel="noopener"><?= icon('nav', 20) ?>Navigacija</a><?php endif; ?>
+        <?php if ($tel): ?><a class="btn ghost grow btn-call" href="<?= e($tel) ?>"><?= icon('phone', 20) ?>Pozovi</a><?php endif; ?>
+        <?php if ($map): ?><a class="btn ghost grow btn-nav" href="<?= e($map) ?>" target="_blank" rel="noopener"><?= icon('nav', 20) ?>Navigacija</a><?php endif; ?>
     </div>
     <?php if (!$b['stop']): ?><span class="status <?= e($cls) ?> big"><i></i><?= e($line) ?></span><?php endif; ?>
 </section>
@@ -75,7 +75,7 @@ $form = fn(string $action, string $inner, string $extra = '') => '<form method="
             <div class="item-row st-<?= e($it['status']) ?>">
                 <span class="item-dot"><?= $it['status'] === 'zavrseno' ? icon('check', 16) : '' ?></span>
                 <div class="grow">
-                    <strong><?= e(ITEM_LABELS[$it['kind']]) ?></strong>
+                    <strong><?= e(item_label($it)) ?></strong>
                     <div class="small muted">
                         <?php if ($it['status'] === 'zavrseno'): ?>
                             <?= e(fmt_dm(substr((string) $it['completed_at'], 0, 10))) ?><?= $it['completed_by'] ? ' · ' . e(user_name((int) $it['completed_by'])) : '' ?><?= !empty($photoCount[$iid]) ? ' · ' . $photoCount[$iid] . ' sl.' : '' ?><?= $it['note'] ? ' · ' . e(short_desc($it['note'], 50)) : '' ?>
@@ -90,7 +90,7 @@ $form = fn(string $action, string $inner, string $extra = '') => '<form method="
                     <?php if (item_min_photos($it) > 0): ?>
                         <a class="btn primary sm" href="<?= e(url('stavka', ['id' => $iid])) ?>"><?= icon('camera', 16) ?>Završi</a>
                     <?php else: ?>
-                        <form method="post" action="<?= e(url() . 'api/akcija.php') ?>" data-confirm="<?= e(ITEM_LABELS[$it['kind']]) ?> — završeno?"><?= csrf_field() ?><?= once_field() ?><input type="hidden" name="action" value="item_done"><input type="hidden" name="id" value="<?= $iid ?>"><input type="hidden" name="back" value="<?= e(here()) ?>"><button class="btn primary sm" type="submit"><?= icon('check', 16) ?>Završeno</button></form>
+                        <form method="post" action="<?= e(url() . 'api/akcija.php') ?>" data-confirm="<?= e(item_label($it)) ?> — završeno?"><?= csrf_field() ?><?= once_field() ?><input type="hidden" name="action" value="item_done"><input type="hidden" name="id" value="<?= $iid ?>"><input type="hidden" name="back" value="<?= e(here()) ?>"><button class="btn primary sm" type="submit"><?= icon('check', 16) ?>Završeno</button></form>
                     <?php endif; ?>
                 <?php elseif ($it['status'] === 'zavrseno' && !empty($photoCount[$iid])): ?>
                     <a class="btn link sm" href="<?= e(url('stavka', ['id' => $iid])) ?>">Detalji</a>
@@ -108,7 +108,7 @@ $form = fn(string $action, string $inner, string $extra = '') => '<form method="
             <?php foreach ($photos as $f): ?>
                 <a href="<?= e(file_url((int) $f['id'])) ?>" target="_blank" rel="noopener">
                     <img src="<?= e(file_url((int) $f['id'], true)) ?>" alt="" loading="lazy">
-                    <?php if ($f['kind'] === 'lokacija_pre'): ?><span class="ph-tag">PRE</span><?php elseif ($f['item_kind']): ?><span class="ph-tag"><?= e(mb_strtoupper(ITEM_LABELS[$f['item_kind']])) ?></span><?php endif; ?>
+                    <?php if ($f['kind'] === 'lokacija_pre'): ?><span class="ph-tag">PRE</span><?php elseif ($f['purpose'] === 'nedostatak'): ?><span class="ph-tag warn">PROBLEM</span><?php elseif ($f['item_kind']): ?><span class="ph-tag"><?= e(mb_strtoupper(item_label(['kind' => $f['item_kind'], 'label' => $f['item_label']]))) ?></span><?php endif; ?>
                 </a>
             <?php endforeach; ?>
         </div>

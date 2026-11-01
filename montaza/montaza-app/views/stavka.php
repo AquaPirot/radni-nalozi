@@ -16,7 +16,7 @@ $can = can_act_item($user, $it);
 <?php endif; ?>
 
 <?php if (!$done && $can): ?>
-    <form class="stack" method="post" action="<?= e(url('stavka', ['id' => $it['id']])) ?>" data-gate data-confirm="Potvrđuješ da je <?= e(mb_strtolower(ITEM_LABELS[$it['kind']])) ?> završen(a)?">
+    <form class="stack" method="post" action="<?= e(url('stavka', ['id' => $it['id']])) ?>" data-gate data-confirm="Potvrđuješ da je <?= e(mb_strtolower(item_label($it))) ?> završen(a)?">
         <?= csrf_field() ?><?= once_field() ?>
         <?php if ($it['kind'] !== 'nalog'): ?>
             <?= uploader('foto_ids', 'Slike', true, 'foto', $min > 0, $min > 0 ? 'najmanje ' . $min : 'opciono') ?>

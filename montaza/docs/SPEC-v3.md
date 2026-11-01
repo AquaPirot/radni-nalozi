@@ -18,23 +18,36 @@ Dogovor sa vlasnikom posle v2 („previše informacija, nije jednostavno"):
 | **Projekat** | Jedna strana: adresa, telefon, Pozovi, Navigacija, status, zastoj, montaža (dan i vreme), radni nalog (PDF), stavke, slike, komentari, prijava zastoja, istorija. |
 | **Izveštaj** | Mesečno: završeno, montaže, trajanje, zastoji po razlogu, završeni projekti, PDF sa slikama PRE/POSLE. |
 
-## Stavke (kao v1)
-- **Novi / započet posao:** Nalog · (Čelik) · Aluminijum · Cerada · Pakovanje · Montaža
-- **Reklamacija:** Dijagnoza · Materijal · Servis
+## Stavke (po izboru)
+- **Novi / započet posao:** Nalog · stavke izabrane u formi · Montaža.
+  - Izbor je iz spiska u Podešavanjima: Čelik, Aluminijum, Cerada, Staklo, Giljotina, ZIP zavese, Pakovanje.
+  - Redosled stavki je redosled u spisku.
+  - Kad se izbor promeni, započete i završene stavke ostaju, a nezapočete se uklanjaju.
+- **Reklamacija:** opis problema (obavezan) i slike problema. Ima samo jednu stavku, **Servis** (teren).
 
 Pravila:
 - Nalog se sam završava kad se doda PDF.
-- Hala-stavke (čelik, aluminijum, cerada, pakovanje, materijal) se završavaju jednim dodirom, bez slike. Slike se mogu dodati na projekat kad god zatreba.
-- Montaža i servis traže najmanje 3 slike (broj se menja u Podešavanjima).
+- Hala-stavke se završavaju jednim dodirom, bez slike.
+- Montaža traži najmanje 3 slike (broj je u Podešavanjima).
 - Kad je sve završeno, projekat je završen.
+- Ako je u adresu nalepljen Google Maps link, on se ne ispisuje kao adresa: dugme Navigacija ga otvara direktno.
+
+## Boje
+Leva ivica kartice i status su obojeni:
+- zeleno: spremno ili završeno;
+- plavo: u radu ili reklamacija;
+- narandžasto: zastoj ili kasni;
+- sivo: čeka.
+
+„Danas" je zeleno, „sutra" plavo, a oznaka reklamacije ljubičasta.
 
 ## Ko šta menja
 | | Aleksandar | Oliver (hala) | Steva (teren) |
 |---|---|---|---|
 | Vidi sve, komentariše, dodaje slike, prijavljuje i rešava zastoj | ✓ | ✓ | ✓ |
 | Otvara/menja projekat, dan montaže, nalog | ✓ | | |
-| Čelik, aluminijum, cerada, pakovanje, materijal | ✓ | ✓ | |
-| Montaža, dijagnoza, servis | ✓ | | ✓ |
+| Stavke hale (izabrane u projektu) | ✓ | ✓ | |
+| Montaža, servis | ✓ | | ✓ |
 
 ## Obaveštenja
 - Novi projekat → hala i teren.
@@ -55,4 +68,4 @@ Migracija `004_jednostavno`:
 
 Tabele v2 (sistemi, faze, termini, uplate, zadaci) ostaju u bazi netaknute.
 
-Provera je `tests/scenariji.sh`: 35 provera kroz prave ekrane. Pored toga, nadogradnja je proverena na kopiji v1 baze (v1 → v2 → v3).
+Provera je `tests/scenariji.sh`: 43 provere kroz prave ekrane. Pored toga, nadogradnja je proverena na kopiji v1 baze (v1 → v2 → v3).

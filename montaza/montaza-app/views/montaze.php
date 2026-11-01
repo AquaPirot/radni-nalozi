@@ -16,19 +16,20 @@ $dayTitle = function (string $key): string {
 
 <?php foreach ($days as $key => $list): ?>
     <section class="stack">
-        <h2 class="sec-head"><span class="<?= $key === '0000' ? 'warn' : '' ?>"><?= e($dayTitle($key)) ?></span><span><?= count($list) ?></span></h2>
+        <?php $dcls = $key === '0000' ? 'warn' : ($key === today()->format('Y-m-d') ? 'today' : ($key === today()->modify('+1 day')->format('Y-m-d') ? 'tomorrow' : '')); ?>
+        <h2 class="sec-head day-head <?= $dcls ?>"><span><?= e($dayTitle($key)) ?></span><span><?= count($list) ?></span></h2>
         <?php foreach ($list as $b): $p = $b['p']; [$line, $cls] = status_line($b); $tel = tel_url($p); $map = maps_url($p); ?>
-            <article class="mcard">
+            <article class="mcard st-<?= e($cls) ?>">
                 <div class="row-between">
-                    <span class="time-chip mono"><?= $key === '0000' ? e(fmt_dm($p['install_date'])) . ' · ' : '' ?><?= $p['install_time'] ? e(substr($p['install_time'], 0, 5)) : 'ceo dan' ?></span>
+                    <span class="time-chip mono <?= $dcls ?>"><?= $key === '0000' ? e(fmt_dm($p['install_date'])) . ' · ' : '' ?><?= $p['install_time'] ? e(substr($p['install_time'], 0, 5)) : 'ceo dan' ?></span>
                     <span class="status <?= e($cls) ?>"><i></i><?= e($line) ?></span>
                 </div>
-                <a class="mcard-name" href="<?= e(url('projekat', ['id' => $p['id']])) ?>"><strong><?= e($p['customer_name']) ?></strong><?= $p['type'] === 'reklamacija' ? ' <span class="tag warn">Reklamacija</span>' : '' ?></a>
-                <div class="mcard-addr"><?= e(implode(', ', array_filter([$p['address'], $p['city']])) ?: 'adresa nije upisana') ?></div>
+                <a class="mcard-name" href="<?= e(url('projekat', ['id' => $p['id']])) ?>"><strong><?= e($p['customer_name']) ?></strong><?= $p['type'] === 'reklamacija' ? ' <span class="tag rekl">Reklamacija</span>' : '' ?></a>
+                <div class="mcard-addr"><?= e(address_text($p) ?: 'adresa nije upisana') ?></div>
                 <?php if ($p['phone']): ?><div class="mono small muted"><?= e($p['phone']) ?></div><?php endif; ?>
                 <div class="btn-row">
-                    <?php if ($tel): ?><a class="btn ghost sm grow" href="<?= e($tel) ?>"><?= icon('phone', 18) ?>Pozovi</a><?php endif; ?>
-                    <?php if ($map): ?><a class="btn ghost sm grow" href="<?= e($map) ?>" target="_blank" rel="noopener"><?= icon('nav', 18) ?>Navigacija</a><?php endif; ?>
+                    <?php if ($tel): ?><a class="btn ghost sm grow btn-call" href="<?= e($tel) ?>"><?= icon('phone', 18) ?>Pozovi</a><?php endif; ?>
+                    <?php if ($map): ?><a class="btn ghost sm grow btn-nav" href="<?= e($map) ?>" target="_blank" rel="noopener"><?= icon('nav', 18) ?>Navigacija</a><?php endif; ?>
                     <?php if ($b['nalog']): ?><a class="btn ghost sm grow" href="<?= e(file_url($b['nalog'])) ?>" target="_blank" rel="noopener"><?= icon('file', 18) ?>Nalog</a><?php endif; ?>
                 </div>
             </article>

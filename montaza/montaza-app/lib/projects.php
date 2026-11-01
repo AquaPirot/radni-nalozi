@@ -42,33 +42,82 @@ const REASON_LABELS = [
 ];
 const REASONS_NEW = ['materijal', 'kupac', 'vreme', 'transport', 'drugo'];
 
-// sort ima fiksne „slotove" da se čelik može ubaciti/izbaciti naknadno
-const TEMPLATE_STD = [
-    ['nalog',      'vlasnik', 10],
-    ['celik',      'hala',    20],
-    ['aluminijum', 'hala',    30],
-    ['cerada',     'hala',    40],
-    ['pakovanje',  'hala',    50],
-    ['montaza',    'teren',   60],
-];
-const TEMPLATE_REKLAMACIJA = [
-    ['dijagnoza', 'teren', 10],
-    ['materijal', 'hala',  20],
-    ['servis',    'teren', 30],
-];
+// ── Stavke po izboru ────────────────────────────────────────
+// Nalog (vlasnik) na početku, Montaža (teren) na kraju; između — stavke hale izabrane u formi projekta.
+// Reklamacija ima samo „Servis" (teren). Spisak za izbor se menja u Podešavanjima.
 
-function item_template(string $type, bool $steel): array
+const LEGACY_KINDS = ['čelik' => 'celik', 'aluminijum' => 'aluminijum', 'cerada' => 'cerada', 'pakovanje' => 'pakovanje', 'materijal' => 'materijal'];
+const FIXED_KINDS = ['nalog', 'montaza', 'servis', 'dijagnoza'];
+const DEFAULT_CATALOG = "Čelik\nAluminijum\nCerada\nStaklo\nGiljotina\nZIP zavese\nPakovanje";
+
+/** Spisak stavki za izbor (Podešavanja → jedna po redu). */
+function item_catalog(): array
+{
+    $list = array_values(array_unique(array_filter(array_map('trim', explode("\n", (string) setting('item_catalog', DEFAULT_CATALOG))))));
+    return $list ?: ['Aluminijum', 'Pakovanje'];
+}
+
+function item_label(array $i): string
+{
+    return (string) (($i['label'] ?? null) ?: (ITEM_LABELS[$i['kind']] ?? ucfirst((string) $i['kind'])));
+}
+
+/** Ključ za poređenje stavki (isti naziv = ista stavka). */
+function item_key(array $i): string
+{
+    return in_array($i['kind'], FIXED_KINDS, true) ? $i['kind'] : mb_strtolower(item_label($i));
+}
+
+/** Željene stavke za vrstu posla i izbor: [[kind, label|null, responsible, sort], …] */
+function desired_items(string $type, array $works): array
 {
     if ($type === 'reklamacija') {
-        return TEMPLATE_REKLAMACIJA;
+        return [['servis', null, 'teren', 900]];
     }
-    return array_values(array_filter(TEMPLATE_STD, fn($t) => $t[0] !== 'celik' || $steel));
+    $out = [['nalog', null, 'vlasnik', 10]];
+    $cat = item_catalog();
+    foreach ($works as $w) {
+        $idx = array_search($w, $cat, true);
+        $kind = LEGACY_KINDS[mb_strtolower($w)] ?? 'rad';
+        $out[] = [$kind, $kind === 'rad' ? $w : null, 'hala', 20 + ($idx === false ? 50 : (int) $idx) * 10];
+    }
+    $out[] = ['montaza', null, 'teren', 900];
+    return $out;
+}
+
+/** Usklađuje stavke projekta sa izborom: dodaje nove, briše samo nezapočete koje više nisu izabrane. */
+function sync_items(int $projectId, string $type, array $works): void
+{
+    $want = [];
+    foreach (desired_items($type, $works) as $d) {
+        $want[item_key(['kind' => $d[0], 'label' => $d[1]])] = $d;
+    }
+    $have = [];
+    foreach (q_all('SELECT * FROM project_items WHERE project_id = ?', [$projectId]) as $i) {
+        $k = item_key($i);
+        if (!isset($want[$k]) && $i['status'] === 'ceka') {
+            q('DELETE FROM project_items WHERE id = ?', [$i['id']]);
+        } else {
+            $have[$k] = true;
+        }
+    }
+    foreach ($want as $k => [$kind, $label, $resp, $sort]) {
+        if (!isset($have[$k])) {
+            q('INSERT INTO project_items (project_id, kind, label, sort, responsible) VALUES (?, ?, ?, ?, ?)', [$projectId, $kind, $label, $sort, $resp]);
+        }
+    }
+}
+
+/** Izabrane stavke hale (za formu izmene). */
+function project_works(array $items): array
+{
+    return array_values(array_map('item_label', array_filter($items, fn($i) => !in_array($i['kind'], FIXED_KINDS, true))));
 }
 
 /** Koliko slika treba za završetak: samo montaža/servis traže slike (podešavanje), ostalo ne. */
 function item_min_photos(array $item): int
 {
-    return in_array($item['kind'], ['montaza', 'servis'], true) ? (int) setting('min_photos_montaza', '3') : 0;
+    return $item['kind'] === 'montaza' ? (int) setting('min_photos_montaza', '3') : 0;
 }
 
 /** Stavke na kojima se prilaže više slika (teren). */
@@ -228,12 +277,15 @@ function status_line(array $b): array
     if (!$cur) {
         return ['Sve stavke završene', 'ok'];
     }
+    if ($p['type'] === 'reklamacija') {
+        return [$cur['status'] === 'u_toku' ? 'Reklamacija — u radu' : 'Reklamacija — čeka servis', 'info'];
+    }
     if (item_is_field($cur['kind']) && $cur['status'] === 'ceka' && ready_for_field($b['items'])) {
         return [['montaza' => 'Spremno za montažu', 'servis' => 'Spremno za servis', 'dijagnoza' => 'Čeka dijagnozu'][$cur['kind']], 'ok'];
     }
-    $label = ITEM_LABELS[$cur['kind']];
+    $label = item_label($cur);
     if ($cur['status'] === 'u_toku') {
-        return [$label . ' — u radu', 'live'];
+        return [$label . ' — u radu', 'info'];
     }
     return ['Čeka: ' . mb_strtolower($label), 'idle'];
 }
@@ -266,8 +318,25 @@ function install_when(array $p, bool $relative = true): string
     return $day . ($p['install_time'] ? ' u ' . substr((string) $p['install_time'], 0, 5) : '');
 }
 
+function address_is_link(?string $a): bool
+{
+    return (bool) preg_match('~^https?://~i', trim((string) $a));
+}
+
+/** Adresa za prikaz: ako je u adresu nalepljen link (Google Maps), prikazuje se mesto + „lokacija na mapi". */
+function address_text(array $p): string
+{
+    if (address_is_link($p['address'])) {
+        return trim(($p['city'] ? $p['city'] . ' · ' : '') . 'lokacija na mapi');
+    }
+    return implode(', ', array_filter([$p['address'], $p['city']]));
+}
+
 function maps_url(array $p): string
 {
+    if (address_is_link($p['address'])) {
+        return trim((string) $p['address']);
+    }
     $q = trim(implode(', ', array_filter([$p['address'], $p['city']])));
     return $q === '' ? '' : 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($q);
 }
@@ -288,17 +357,17 @@ function project_card(array $b): string
     $steps = '';
     foreach ($b['items'] as $i) {
         $c = match ($i['status']) { 'zavrseno' => 'done', 'u_toku' => 'live', 'zastoj' => 'warn', default => '' };
-        $steps .= '<span class="' . $c . '" title="' . e(ITEM_LABELS[$i['kind']] . ': ' . ITEM_STATUS[$i['status']]) . '"></span>';
+        $steps .= '<span class="' . $c . '" title="' . e(item_label($i) . ': ' . ITEM_STATUS[$i['status']]) . '"></span>';
     }
     $when = install_when($p);
     $meta = $p['status'] === 'zavrsen' ? '' : ($when
-        ? '<span class="' . ($late ? 'warn' : '') . '">' . icon('plan', 16) . ' Montaža ' . e($when) . ($late ? ' — kasni ' . $late . ' d' : '') . '</span>'
+        ? '<span class="' . ($late ? 'warn' : (str_starts_with($when, 'danas') ? 'today' : (str_starts_with($when, 'sutra') ? 'tomorrow' : ''))) . '">' . icon('plan', 16) . ' ' . ($p['type'] === 'reklamacija' ? 'Izlazak ' : 'Montaža ') . e($when) . ($late ? ' — kasni ' . $late . ' d' : '') . '</span>'
         : '<span class="muted">' . icon('plan', 16) . ' Montaža: datum nije određen</span>');
-    return '<a class="pcard" href="' . e(url('projekat', ['id' => $p['id']])) . '">'
+    return '<a class="pcard st-' . ($late ? 'warn' : $cls) . '" href="' . e(url('projekat', ['id' => $p['id']])) . '">'
         . '<div class="pcard-top"><div class="pcard-name"><strong>' . e($p['customer_name']) . '</strong>'
-        . ($p['type'] === 'reklamacija' ? '<span class="tag warn">Reklamacija</span>' : '') . '</div>'
+        . ($p['type'] === 'reklamacija' ? '<span class="tag rekl">Reklamacija</span>' : '') . '</div>'
         . ($b['nalog'] ? '<span class="muted small">' . icon('file', 16) . '</span>' : '') . '</div>'
-        . '<div class="pcard-sub">' . e(implode(' · ', array_filter([$p['city'], $p['address']]))) . '</div>'
+        . '<div class="pcard-sub">' . e(address_text($p)) . '</div>'
         . '<div class="steps">' . $steps . '</div>'
         . '<div class="pcard-foot"><span class="status ' . $cls . '"><i></i>' . e($line) . '</span></div>'
         . ($meta !== '' ? '<div class="pcard-meta small">' . $meta . '</div>' : '')
