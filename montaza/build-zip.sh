@@ -16,6 +16,7 @@ cp README-INSTALACIJA.md "$TMP/root/"
 # Nikad u ZIP: lična podešavanja, logovi, slike kupaca
 rm -f  "$TMP/root/montaza-app/config.php"
 rm -rf "$TMP/root/montaza-app/logs"
+rm -rf "$TMP/root/montaza-app/backups"
 find "$TMP/root/uploads" -mindepth 1 ! -name '.htaccess' -exec rm -rf {} +
 
 rm -f dist/montaza-*.zip

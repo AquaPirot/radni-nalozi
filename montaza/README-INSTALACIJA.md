@@ -76,21 +76,30 @@ Ko šta dobija, isto i na telefon i na Telegram:
   - završena montaža.
 - **Za zadatke:** kome je zadatak dat dobija poruku kad ga dobije, a ko ga je zadao kad je završen ili kad ima zastoj.
 
-## 7. Ponedeljni pregled (cPanel → Cron Jobs)
+## 7. Dnevna obaveštenja i rezervna kopija (cPanel → Cron Jobs)
 
-**Add New Cron Job**:
-- Minute `0`, Hour `7`, Day `*`, Month `*`, Weekday `1` (ponedeljak);
-- Command: komanda koju je ispisala instalacija, npr.:
+Dodaj **dva** posla (**Add New Cron Job**). Zameni `KORISNIK` svojim cPanel nalogom:
 
-```
-/usr/local/bin/php /home/KORISNIK/montaza.aggroup.rs/montaza-app/cron/nedeljni-pregled.php
-```
+| Kada | Minute | Hour | Day | Month | Weekday | Command |
+|---|---|---|---|---|---|---|
+| jutro | `5` | `7` | `*` | `*` | `*` | `/usr/local/bin/php /home/KORISNIK/montaza.aggroup.rs/montaza-app/cron/dnevni.php` |
+| veče | `5` | `18` | `*` | `*` | `*` | `/usr/local/bin/php /home/KORISNIK/montaza.aggroup.rs/montaza-app/cron/dnevni.php --vece` |
 
-Svako ponedeljkom u 7:00 dobije obaveštenje na telefonu i, ako ima Telegram, detaljnu poruku sa ovim:
-- montaže te nedelje;
-- šta kasni;
-- otvoreni zastoji;
-- njegovi zadaci.
+**Ujutru** posao radi sledeće:
+- ekipi šalje današnje termine;
+- svakome šalje zadatke i faze kojima je danas rok ili kasne;
+- vlasniku šalje projekte kojima rok ističe danas ili za 3 dana;
+- **ponedeljkom** vlasniku šalje pregled nedelje: termine, šta traži odluku, zastoje, kašnjenja, naplatu i gotovinu kod radnika;
+- briše slike koje su poslate, a nikad sačuvane;
+- pravi **rezervnu kopiju baze** u `montaza-app/backups/`. Čuva poslednjih 14.
+
+**Uveče** posao radi sledeće:
+- ekipi šalje sutrašnje termine;
+- hali i vlasniku šalje sutrašnje montaže kojima proizvod još nije gotov.
+
+Proba bez slanja: `php dnevni.php --dry-run`.
+
+**Vraćanje kopije:** preuzmi `.sql.gz` iz File Managera (`montaza-app/backups/`), pa ga uvezi preko phpMyAdmin → Import.
 
 ---
 

@@ -54,6 +54,8 @@ require APP_DIR . '/lib/project_actions.php';
 require APP_DIR . '/lib/tasks.php';
 require APP_DIR . '/lib/cards.php';
 require APP_DIR . '/lib/dashboard.php';
+require APP_DIR . '/lib/report.php';
+require APP_DIR . '/lib/backup.php';
 require APP_DIR . '/lib/migrate.php';
 
 function config(string $key, mixed $default = null): mixed

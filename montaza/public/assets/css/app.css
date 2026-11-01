@@ -833,3 +833,4 @@ details.card > summary::-webkit-details-marker { display: none; }
 details.card[open] > summary .ic { transform: rotate(90deg); }
 .btn.link { background: none; border: 0; text-decoration: underline; min-height: 48px; }
 input:disabled { opacity: .45; }
+.rcard strong.mono, .tile strong.mono { white-space: nowrap; }

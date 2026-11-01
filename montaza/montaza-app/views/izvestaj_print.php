@@ -1,4 +1,4 @@
-<?php /** @var string $monthLabel @var array $completed @var int $pergole @var int $reklamacije @var mixed $avgDays @var array $stops @var int $lostDays @var array $byReason @var array $itemSpeed @var array $carry @var int $carryLate @var array $paid @var array $tasks @var array $photos @var string $nextLabel @var bool $isCurrent */ ?>
+<?php /** @var array $completed @var array $photos @var array $systemsBy … (vidi report_data) */ $money = fn($v) => fmt_money((string) $v); ?>
 <!doctype html>
 <html lang="sr">
 <head>
@@ -36,45 +36,70 @@
 </header>
 
 <div class="tiles">
-    <div class="tile"><span>Završeno projekata</span><b><?= count($completed) ?></b><span><?= $reklamacije ?> reklamacija</span></div>
-    <div class="tile"><span>Napravljeno pergola</span><b><?= $pergole ?></b></div>
-    <div class="tile"><span>Otvaranje → kraj (novi)</span><b><?= $avgDays !== null ? (int) round((float) $avgDays) : '—' ?></b><span>dana prosek</span></div>
-    <div class="tile"><span>Zastoji</span><b><?= count($stops) ?></b><span><?= $lostDays ?> izgubljenih dana</span></div>
+    <div class="tile"><span>Završeno projekata</span><b><?= count($completed) ?></b><span><?= e(implode(' · ', array_map(fn($k, $c) => $c . ' ' . mb_strtolower(WORK_TYPES[$k] ?? $k), array_keys($byWork), $byWork))) ?></span></div>
+    <div class="tile"><span>Pergola / sistema</span><b><?= $pergole ?></b><span>montirano <?= $mounted ?></span></div>
+    <div class="tile"><span>Izlazaka na teren</span><b><?= $visits ?></b><span><?= $revisits ?> ponovnih</span></div>
+    <div class="tile"><span>Zastoji</span><b><?= $stops ?></b><span><?= $lostDays ?> izgubljenih dana</span></div>
 </div>
 
-<h2>Naplaćeno: <?= e(fmt_money((string) $paid['total'])) ?> <span style="font-weight:400;color:#666">(<?= (int) $paid['n'] ?> naplata<?= (int) $paid['diffs'] ? ', ' . (int) $paid['diffs'] . ' sa razlikom' : '' ?>)</span></h2>
-<h2>Zadaci: <?= (int) $tasks['done'] ?> završeno<?= (int) $tasks['done_late'] ? ', ' . (int) $tasks['done_late'] . ' posle roka' : '' ?><?= (int) $tasks['open_late'] ? ', ' . (int) $tasks['open_late'] . ' kasni' : '' ?></h2>
+<h2>Projekti</h2>
+<table>
+    <tr><td>Pušteno u realizaciju</td><td class="mono"><?= $released ?></td></tr>
+    <tr><td>Prosečno trajanje (puštanje → kraj, novi)</td><td class="mono"><?= $avgDays !== null ? (int) round((float) $avgDays) . ' d' : '—' ?></td></tr>
+    <tr><td><?= $isCurrent ? 'Prelazi' : 'Prešlo' ?> u <?= e($nextLabel) ?></td><td class="mono"><?= count($carry) ?><?= $carryLate ? ' (' . $carryLate . ' kasni)' : '' ?></td></tr>
+</table>
+
+<?php if ($prod): ?>
+    <h2>Proizvodnja po tipu sistema</h2>
+    <table>
+        <tr><th>Tip</th><th>Komada</th><th>Prosek dana</th><th>Najsporija faza</th></tr>
+        <?php foreach ($prod as $type => $x): $slow = $x['phases'][0] ?? null; ?>
+            <tr><td><?= e($type) ?></td><td class="mono"><?= $x['qty'] ?></td><td class="mono"><?= $x['days'] ? e(fmt_days(array_sum($x['days']) / count($x['days']))) : '—' ?></td><td><?= $slow ? e($slow['name']) . ' · ' . e(fmt_days($slow['days'])) . ' d' : '—' ?></td></tr>
+        <?php endforeach; ?>
+    </table>
+<?php endif; ?>
+
+<h2>Montaža</h2>
+<table>
+    <?php foreach ($visitKinds as $k => $c): ?><tr><td><?= e(VISIT_KINDS[$k] ?? $k) ?></td><td class="mono"><?= $c ?></td></tr><?php endforeach; ?>
+    <?php foreach ($visitResults as $k => $c): ?><tr><td>Ishod: <?= e(mb_strtolower(VISIT_RESULTS[$k] ?? $k)) ?></td><td class="mono"><?= $c ?></td></tr><?php endforeach; ?>
+    <tr><td>Ponovni dolasci</td><td class="mono"><?= $revisits ?></td></tr>
+</table>
 
 <?php if ($byReason): ?>
     <h2>Zastoji po razlogu</h2>
-    <table><?php foreach ($byReason as $r => $n): ?><tr><td><?= e(REASON_LABELS[$r]) ?></td><td class="mono"><?= $n ?></td></tr><?php endforeach; ?></table>
+    <table><?php foreach ($byReason as $r => $c): ?><tr><td><?= e(REASON_LABELS[$r] ?? $r) ?></td><td class="mono"><?= $c ?></td></tr><?php endforeach; ?></table>
 <?php endif; ?>
 
-<?php if ($itemSpeed): ?>
-    <h2>Trajanje stavki (prosek dana)</h2>
-    <table><?php foreach ($itemSpeed as $s): ?><tr><td><?= e(ITEM_LABELS[$s['kind']]) ?></td><td class="mono"><?= e(number_format((float) $s['days'], 1, ',', '')) ?></td><td style="color:#666"><?= (int) $s['n'] ?> stavki</td></tr><?php endforeach; ?></table>
-<?php endif; ?>
+<h2>Naplata</h2>
+<table>
+    <tr><td>Primljeno od kupaca</td><td class="mono"><?= e($money($received)) ?></td></tr>
+    <?php foreach ($receivedBy as $k => $x): ?><tr><td style="padding-left:20px;color:#555"><?= e(METHOD_LABELS[$k] ?? $k) ?> (<?= (int) $x['n'] ?>)</td><td class="mono"><?= e($money($x['s'])) ?></td></tr><?php endforeach; ?>
+    <tr><td>Gotovina predata firmi</td><td class="mono"><?= e($money($handed)) ?></td></tr>
+    <tr><td>Gotovina kod radnika (danas)</td><td class="mono"><?= e($money($cashHeld)) ?></td></tr>
+    <tr><td>Ostalo za naplatu (danas)</td><td class="mono"><?= e($money($remaining)) ?></td></tr>
+</table>
+
+<h2>Zadaci</h2>
+<table>
+    <tr><td>Zadato / završeno</td><td class="mono"><?= (int) $tasks['created'] ?> / <?= (int) $tasks['done'] ?></td></tr>
+    <tr><td>Završeno posle roka</td><td class="mono"><?= (int) $tasks['done_late'] ?></td></tr>
+    <tr><td>Ponovo otvoreno</td><td class="mono"><?= (int) $tasks['reopened'] ?></td></tr>
+    <tr><td>Kasni (otvoreno)</td><td class="mono"><?= (int) $tasks['open_late'] ?></td></tr>
+</table>
 
 <h2>Završeni projekti (<?= count($completed) ?>)</h2>
 <?php foreach ($completed as $p): $ph = $photos[$p['id']] ?? []; ?>
     <div class="proj">
         <div>
             <strong style="font-size:15px"><?= e($p['customer_name']) ?></strong> <span class="mono" style="color:#666"><?= e($p['code']) ?></span><br>
-            <?= e(implode(' · ', array_filter([$p['city'], TYPE_LABELS[$p['type']] . ($p['has_steel'] ? ' + čelik' : '')]))) ?><br>
-            <span style="color:#555"><?= e(short_desc($p['description'], 90)) ?></span><br>
-            <span class="mono" style="color:#666">Završeno <?= e(fmt_date(substr($p['completed_at'], 0, 10))) ?><?= $p['payment_received'] !== null ? ' · naplaćeno ' . e(fmt_money($p['payment_received'])) : '' ?></span>
+            <?= e(implode(' · ', array_filter([$p['city'], WORK_TYPES[$p['work_type']] ?? '']))) ?><br>
+            <span style="color:#555"><?= e(systems_summary($systemsBy[$p['id']] ?? [], 4) ?: short_desc($p['description'], 90)) ?></span><br>
+            <span class="mono" style="color:#666">Završeno <?= e(fmt_date(substr($p['completed_at'], 0, 10))) ?></span>
         </div>
-        <div><div class="lbl">PRE</div><?php if (isset($ph['lokacija_pre'])): ?><img src="<?= e(file_url((int) $ph['lokacija_pre']['id'], true)) ?>" alt=""><?php else: ?><div class="ph">nema slike</div><?php endif; ?></div>
+        <div><div class="lbl">PRE</div><?php if (isset($ph['pre'])): ?><img src="<?= e(file_url((int) $ph['pre']['id'], true)) ?>" alt=""><?php else: ?><div class="ph">nema slike</div><?php endif; ?></div>
         <div><div class="lbl">POSLE</div><?php if (isset($ph['posle'])): ?><img src="<?= e(file_url((int) $ph['posle']['id'], true)) ?>" alt=""><?php else: ?><div class="ph">nema slike</div><?php endif; ?></div>
     </div>
 <?php endforeach; ?>
-
-<?php if ($carry): ?>
-    <h2><?= $isCurrent ? 'Prelazi' : 'Prešlo' ?> u <?= e($nextLabel) ?> (<?= count($carry) ?><?= $carryLate ? ', ' . $carryLate . ' kasni' : '' ?>)</h2>
-    <table>
-        <tr><th>Kupac</th><th>Mesto</th><th>Tip</th><th>Rok</th></tr>
-        <?php foreach ($carry as $p): ?><tr><td><?= e($p['customer_name']) ?></td><td><?= e($p['city']) ?></td><td><?= e(TYPE_LABELS[$p['type']]) ?></td><td class="mono"><?= e(fmt_date($p['deadline'])) ?></td></tr><?php endforeach; ?>
-    </table>
-<?php endif; ?>
 </body>
 </html>

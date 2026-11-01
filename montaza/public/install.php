@@ -224,12 +224,13 @@ if (is_post()) {
         db()->commit();
 
         $deleted = @unlink(__FILE__);
-        $cron = '/usr/local/bin/php ' . (realpath(APP_DIR . '/cron/nedeljni-pregled.php') ?: APP_DIR . '/cron/nedeljni-pregled.php');
+        $cronFile = realpath(APP_DIR . '/cron/dnevni.php') ?: APP_DIR . '/cron/dnevni.php';
+        $cron = "5 7 * * *   /usr/local/bin/php $cronFile\n5 18 * * *  /usr/local/bin/php $cronFile --vece";
         install_page('Gotovo', '<div class="alert ok">Aplikacija je instalirana i nalozi su napravljeni.</div>'
             . ($deleted ? '<p class="muted small">install.php je obrisan sa servera.</p>'
                         : '<div class="alert warn">Obriši <code>install.php</code> sa servera (File Manager → Delete).</div>')
-            . '<div class="card stack"><strong>Ponedeljni pregled na Telegramu</strong>'
-            . '<span class="small muted">cPanel → Cron Jobs → minut 0, sat 7, dan u nedelji 1 → komanda:</span>'
+            . '<div class="card stack"><strong>Dnevna obaveštenja i rezervna kopija</strong>'
+            . '<span class="small muted">cPanel → Cron Jobs → dodaj dva posla (jutro 7:05 i veče 18:05):</span>'
             . '<textarea class="input mono small" rows="3" readonly onclick="this.select()">' . h($cron) . '</textarea></div>'
             . '<a class="btn primary block" href="' . h(url('login')) . '">Idi na prijavu</a>');
     }

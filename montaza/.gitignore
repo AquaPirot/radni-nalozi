@@ -2,3 +2,4 @@ montaza-app/config.php
 montaza-app/logs/
 public/uploads/*
 !public/uploads/.htaccess
+montaza-app/backups/
