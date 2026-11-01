@@ -40,8 +40,8 @@ Uradi korak 4 odmah posle raspakivanja: dok instalacija nije završena, `install
 
 Svako na svom telefonu:
 1. Otvori **https://montaza.aggroup.rs** i prijavi se. „Zapamti me" drži prijavu 30 dana.
-2. **Dodaj na početni ekran:**
-   - **Android (Chrome):** meni ⋮ → **Dodaj na početni ekran** / **Instaliraj aplikaciju**;
+2. **Instaliraj kao aplikaciju:**
+   - **Android (Chrome):** u Montaži se pojavi kartica **„Instaliraj Montažu kao aplikaciju"** → **Instaliraj**. Ako je nema: meni ⋮ → **Instaliraj aplikaciju**. Ne koristi „Dodaj na početni ekran", to pravi samo prečicu. Montaža se zatim pojavi u spisku aplikacija i otvara se bez adresne trake. Dugi pritisak na ikonicu nudi prečice Danas, Zadaci i Novi zadatak.
    - **iPhone (Safari):** dugme Deli (□↑) → **Add to Home Screen**.
 3. **Otvori Montažu sa ikonice** → u kartici „Obaveštenja na ovom telefonu" dodirni **Uključi** (ili zvonce gore) → **Dozvoli**.
    Odmah stiže probno obaveštenje „Obaveštenja su uključena ✓", a zvonce postane zeleno.
@@ -118,5 +118,7 @@ Svako ponedeljkom u 7:00 dobije obaveštenje na telefonu i, ako ima Telegram, de
 | Zaboravljena lozinka | Aleksandar: **Podešavanja → korisnik → Nova lozinka**. |
 | Aleksandar zaboravio svoju lozinku | cPanel **Terminal**: `php -r 'echo password_hash("NOVA", PASSWORD_DEFAULT);'` → phpMyAdmin → tabela `users` → red `aleksandar` → nalepi u `password_hash`. |
 | Ponovna instalacija od nule | Obriši `montaza-app/config.php` i sve tabele u bazi, pa ponovo otpakuj ZIP. |
+
+**Ažuriranje (nova verzija):** File Manager → folder subdomena → **Otpremi** `montaza-azuriranje-*.zip` → **Izdvoji** (zameni postojeće) → obriši ZIP. Podešavanja, baza i slike ostaju netaknuti.
 
 **Rezervna kopija:** cPanel → **Backup** → preuzmi bazu (MySQL) i folder `uploads/`, makar jednom mesečno.

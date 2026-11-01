@@ -184,6 +184,46 @@
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
+    // ── Instalacija kao aplikacija (Android/Chrome: pravi WebAPK, ne prečica) ──
+    const installBanner = document.querySelector('[data-install-banner]');
+    const INSTALL_DISMISS = 'mz_install_dismissed';
+    let installEvent = null;
+    const installDismissed = () => { try { return localStorage.getItem(INSTALL_DISMISS) === '1'; } catch (_) { return false; } };
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();             // naše dugme umesto Chrome-ovog trenutnog oblačića
+        installEvent = e;
+        if (installBanner && !installDismissed()) installBanner.hidden = false;
+    });
+    window.addEventListener('appinstalled', () => {
+        installEvent = null;
+        if (installBanner) installBanner.hidden = true;
+    });
+    if (installBanner) {
+        installBanner.querySelector('[data-install-go]').addEventListener('click', async () => {
+            if (installEvent) {
+                installEvent.prompt();
+                await installEvent.userChoice.catch(() => null);
+                installEvent = null;
+                installBanner.hidden = true;
+            } else {
+                alert('Chrome: meni ⋮ → „Instaliraj aplikaciju".\niPhone (Safari): dugme Deli (□↑) → „Add to Home Screen".');
+            }
+        });
+        installBanner.querySelector('[data-install-dismiss]').addEventListener('click', () => {
+            try { localStorage.setItem(INSTALL_DISMISS, '1'); } catch (_) {}
+            installBanner.hidden = true;
+        });
+        // iPhone nema dugme za instalaciju — prikaži uputstvo dok aplikacija nije dodata
+        const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const inApp = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+        if (ios && !inApp && !installDismissed()) {
+            installBanner.querySelector('[data-install-text]').textContent =
+                'Safari: dugme Deli (□↑) → „Add to Home Screen". Posle otvaraj Montažu sa ikonice.';
+            installBanner.querySelector('[data-install-go]').hidden = true;
+            installBanner.hidden = false;
+        }
+    }
+
     // ── Obaveštenja iz aplikacije (Web Push) ──
     const vapidMeta = document.querySelector('meta[name="vapid-key"]');
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -211,7 +251,7 @@
         if (iosNeedsInstall) {
             bell.hidden = false;
             bell.classList.remove('on');
-            if (banner && !dismissed()) {
+            if (banner && !dismissed() && (!installBanner || installBanner.hidden)) {
                 banner.querySelector('[data-push-banner-text]').textContent =
                     'Na iPhone-u: dugme Deli → „Add to Home Screen", pa otvori Montažu sa ikonice i uključi obaveštenja.';
                 banner.querySelector('[data-push-enable]').hidden = true;

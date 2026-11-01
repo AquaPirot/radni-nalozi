@@ -103,6 +103,7 @@ function icon(string $name, int $size = 22): string
         'video'    => '<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-4v12l-6-4"/>',
         'download' => '<path d="M12 4v12M6 11l6 6 6-6M4 20h16"/>',
         'bell'     => '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+        'home'     => '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
         'close'    => '<path d="M18 6 6 18M6 6l12 12"/>',
         'chevron'  => '<path d="m9 18 6-6-6-6"/>',
         'edit'     => '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',

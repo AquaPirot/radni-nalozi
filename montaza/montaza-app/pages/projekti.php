@@ -38,6 +38,14 @@ $projects = q_all(
 );
 $ids = array_column($projects, 'id');
 $itemsBy = load_items_for($ids);
+$taskCount = [];
+if ($ids) {
+    [$tv, $tvp] = task_visibility_sql($user);
+    $in = implode(',', array_fill(0, count($ids), '?'));
+    foreach (q_all("SELECT t.project_id, COUNT(*) n FROM tasks t WHERE $tv AND t.status <> 'zavrseno' AND t.project_id IN ($in) GROUP BY t.project_id", array_merge($tvp, $ids)) as $r) {
+        $taskCount[$r['project_id']] = (int) $r['n'];
+    }
+}
 $stopBy = open_stoppages_for($ids);
 
 // Zauzetost nedelja (sve montaže te nedelje osim otkazanih)
@@ -88,5 +96,6 @@ view('projekti', [
     'groups'   => $groups,
     'itemsBy'  => $itemsBy,
     'stopBy'   => $stopBy,
+    'taskCount' => $taskCount,
     'topExtra' => '<button class="icon-btn" type="button" data-toggle="#search-row" aria-label="Pretraga">' . icon('search') . '</button>',
 ]);

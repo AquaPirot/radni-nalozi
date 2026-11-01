@@ -25,7 +25,7 @@ try {
             task_complete((int) $task['id'], $user, '', []);
             flash('ok', 'Završeno: ' . $task['title']);
             $f = (string) ($_POST['back'] ?? '');
-            $back = url('zadaci', preg_match('/^[a-z]+$/', $f) ? ['f' => $f] : []);
+            $back = $f === 'danas' ? url('danas') : url('zadaci', preg_match('/^[a-z]+$/', $f) ? ['f' => $f] : []);
             break;
         case 'start':
             task_start((int) $task['id'], $user);

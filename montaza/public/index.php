@@ -6,6 +6,7 @@ session_boot();
 
 // ?p=… → [handler u montaza-app/pages/, dozvoljene uloge (prazno = svi prijavljeni)]
 $routes = [
+    'danas'       => ['danas',          []],
     'projekti'    => ['projekti',       []],
     'projekat'    => ['projekat',       []],
     'novi'        => ['projekat_forma', ['vlasnik']],
@@ -25,7 +26,7 @@ $routes = [
     'podesavanja' => ['podesavanja',    ['vlasnik']],
 ];
 
-$p = (string) ($_GET['p'] ?? 'projekti');
+$p = (string) ($_GET['p'] ?? 'danas');
 
 if ($p === 'login') {
     require APP_DIR . '/pages/login.php';

@@ -55,6 +55,9 @@ $showPay = can_see_payment($user);
                 </div>
                 <div class="pcard-foot">
                     <span class="status <?= e($lineCls) ?>"><i></i><?= e($line) ?></span>
+                    <?php if (!empty($taskCount[$p['id']])): $n = $taskCount[$p['id']]; ?>
+                        <span class="paytag task-count"><?= icon('zadaci', 18) ?><?= $n ?> <?= $n === 1 ? 'ZADATAK' : 'ZADATKA' ?></span>
+                    <?php endif; ?>
                     <?php if ($showPay && $p['payment_when'] !== 'ne' && $p['status'] === 'aktivan'): ?>
                         <span class="paytag<?= $p['payment_confirmed_at'] ? ' ok' : '' ?>"><?= icon('cash', 18) ?><?= $p['payment_when'] === 'pre' ? 'PRE' : 'POSLE' ?></span>
                     <?php endif; ?>

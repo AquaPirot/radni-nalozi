@@ -42,5 +42,6 @@
         <button class="btn primary block" type="submit">Prijavi se</button>
     </form>
 </main>
+<script src="<?= e(asset('js/app.js')) ?>" defer></script>
 </body>
 </html>

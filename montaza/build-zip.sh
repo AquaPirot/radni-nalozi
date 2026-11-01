@@ -22,6 +22,11 @@ rm -f dist/montaza-*.zip
 (cd "$TMP/root" && zip -qr -X "$OLDPWD/$OUT" . -x '*.DS_Store')
 echo "$OUT ($(du -h "$OUT" | cut -f1))"
 
+# ZIP za AŽURIRANJE već instalirane aplikacije: bez install.php, uputstva i uploads/
+UPD="dist/montaza-azuriranje-$(date +%Y%m%d).zip"
+(cd "$TMP/root" && zip -qr -X "$OLDPWD/$UPD" . -x '*.DS_Store' -x 'install.php' -x 'README-INSTALACIJA.md' -x 'uploads/*')
+echo "$UPD ($(du -h "$UPD" | cut -f1))"
+
 # SQL za phpMyAdmin: briše SVE tabele u izabranoj bazi i pravi Montažine tabele
 SQL="dist/montaza-baza.sql"
 {

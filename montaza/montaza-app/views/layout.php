@@ -3,6 +3,7 @@
 $u   = current_user();
 $tab = $tab ?? '';
 $nav = [
+    ['danas',    'Danas',    'home',     []],
     ['projekti', 'Projekti', 'projekti', []],
     ['zadaci',   'Zadaci',   'zadaci',   []],
     ['plan',     'Plan',     'plan',     ['vlasnik']],
@@ -60,6 +61,13 @@ if ($focus) {
     <?php endif; ?>
 
     <?php if (!$focus && empty($hideTop)): ?>
+    <div class="push-banner" data-install-banner hidden>
+        <div><strong>Instaliraj Montažu kao aplikaciju</strong><span class="small muted" data-install-text>Ikonica u spisku aplikacija, otvara se bez adresne trake — kao prava aplikacija.</span></div>
+        <div class="btn-row">
+            <button class="btn primary sm" type="button" data-install-go><?= icon('download', 18) ?>Instaliraj</button>
+            <button class="btn ghost sm" type="button" data-install-dismiss>Ne sada</button>
+        </div>
+    </div>
     <div class="push-banner" data-push-banner hidden>
         <div><strong>Obaveštenja na ovom telefonu</strong><span class="small muted" data-push-banner-text>Zastoji, nove montaže, zadaci — odmah na ekranu telefona.</span></div>
         <div class="btn-row">
