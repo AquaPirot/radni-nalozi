@@ -88,6 +88,13 @@ if (!is_file($configFile)) {
                     $in['user'], $in['pass'],
                     [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_TIMEOUT => 5]
                 );
+                // Zaštita: baza mora biti prazna (ili već Montažina). Nikad ne diramo tuđe tabele.
+                $existing = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+                if ($existing && !in_array('project_items', $existing, true)) {
+                    throw new RuntimeException('Ova baza već sadrži tabele druge aplikacije ('
+                        . implode(', ', array_slice($existing, 0, 6)) . (count($existing) > 6 ? '…' : '')
+                        . '). Ništa nije menjano. Napravi novu, praznu bazu u cPanel → MySQL Databases i upiši nju.');
+                }
                 install_schema($pdo, $appDir . '/schema.sql');
 
                 $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
@@ -116,6 +123,9 @@ if (!is_file($configFile)) {
                     str_contains($msg, 'Unknown database') => 'Baza sa tim imenom ne postoji. U cPanel-u ime obično počinje prefiksom naloga, npr. korisnik_montaza.',
                     default => 'Nema veze sa bazom: ' . $msg,
                 };
+            }
+            catch (RuntimeException $ex) {
+                $error = $ex->getMessage();
             }
         }
     }
