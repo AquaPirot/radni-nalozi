@@ -605,3 +605,8 @@ a.seg { display: inline-flex; align-items: center; justify-content: center; }
 .rcard .pad { padding: 0 20px 18px; }
 .user-card.off { opacity: .6; }
 .user-card summary > span { gap: 4px; }
+
+/* ══ FAZA 7: PWA (iPhone statusna traka preko sadržaja) ═══ */
+.app { padding-top: env(safe-area-inset-top, 0px); }
+.auth-box { padding-top: calc(64px + env(safe-area-inset-top, 0px)); }
+.hero { margin-top: calc(-1 * env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px); box-sizing: content-box; }

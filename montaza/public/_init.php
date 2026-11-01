@@ -5,7 +5,8 @@ declare(strict_types=1);
 define('PUBLIC_DIR', __DIR__);
 
 $candidates = [
-    dirname(__DIR__) . '/montaza-app/bootstrap.php',
+    dirname(__DIR__) . '/montaza-app/bootstrap.php',      // /home/korisnik/montaza-app (doc root: /home/korisnik/montaza.aggroup.rs)
+    dirname(__DIR__, 2) . '/montaza-app/bootstrap.php',   // /home/korisnik/montaza-app (doc root: /home/korisnik/public_html/montaza)
     __DIR__ . '/montaza-app/bootstrap.php',
 ];
 foreach ($candidates as $c) {

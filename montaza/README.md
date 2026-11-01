@@ -20,7 +20,12 @@ Ako hosting ne dozvoljava folder van `public_html`, stavi `montaza-app/` **unuta
 - [x] Faza 4 — Plan (4 nedelje, kapacitet, nije raspoređeno, prošle nedelje, raspoređivanje)
 - [x] Faza 5 — Izveštaj (mesečne brojke, zastoji, najsporija stavka, naplata, zadaci, PDF sa slikama)
 - [x] Faza 6 — Telegram (obaveštenja, ponedeljni pregled), podešavanja i korisnici
-- [ ] Faza 7 — PWA i ZIP za cPanel
+- [x] Faza 7 — PWA (ikonica na početnom ekranu), ZIP za cPanel, uputstvo
+
+## Instalacija na hosting
+
+Gotov paket: `dist/montaza-*.zip`, uputstvo korak po korak: [`README-INSTALACIJA.md`](README-INSTALACIJA.md).
+Novi ZIP posle izmena: `./build-zip.sh`.
 
 ## Lokalno pokretanje
 

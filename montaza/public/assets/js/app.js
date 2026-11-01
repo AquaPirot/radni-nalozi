@@ -178,6 +178,11 @@
     document.addEventListener('DOMContentLoaded', gateAll);
     if (document.readyState !== 'loading') gateAll();
 
+    // ── PWA: service worker (ikonica na početnom ekranu, keš statike) ──
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+        window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
+    }
+
     // ── Prikaži/sakrij (npr. pretraga) ──
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-toggle]');

@@ -1,0 +1,17 @@
+{
+  "name": "Montaža — AG GROUP",
+  "short_name": "Montaža",
+  "description": "Praćenje projekata pergola: proizvodnja, montaža, zadaci",
+  "lang": "sr-Latn",
+  "start_url": "/?p=projekti&pwa=1",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E0F11",
+  "theme_color": "#0E0F11",
+  "icons": [
+    { "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
