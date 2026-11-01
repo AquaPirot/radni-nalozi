@@ -86,6 +86,10 @@ function create_project(array $in, array $user, ?array $lokacijaUpload, ?array $
     }
 
     rule_maybe_complete_project($pid);
+    notify(['hala', 'teren'], 'Novi projekat: ' . project_ref($in)
+        . ' (' . mb_strtolower(TYPE_LABELS[$in['type']]) . ($in['has_steel'] ? ' + čelik' : '') . ')'
+        . ($in['install_week_start'] ? ' — ned. ' . (int) (new DateTimeImmutable($in['install_week_start']))->format('W') : ' — nije raspoređeno')
+        . ($in['deadline'] ? ', rok ' . fmt_dm($in['deadline']) : ''), $pid);
     return $pid;
 }
 
@@ -168,6 +172,9 @@ function update_project(array $project, array $in, array $user, array $dueDates)
         db()->rollBack();
         throw $ex;
     }
+    if (isset($changed['install_week_start']) && $in['install_week_start'] && $project['status'] === 'aktivan') {
+        notify_week_scheduled(array_merge($project, $fields), $in['install_week_start']);
+    }
     return $notes;
 }
 
@@ -242,4 +249,24 @@ function set_lokacija_photo(array $project, array $upload, array $user): void
     foreach ($old as $f) {
         delete_stored($f);
     }
+}
+
+/** Raspoređivanje u nedelju (plan) + obaveštenje hali i terenu. */
+function set_project_week(array $project, ?string $week, array $user): void
+{
+    if ($project['install_week_start'] === $week) {
+        return;
+    }
+    q('UPDATE projects SET install_week_start = ? WHERE id = ?', [$week, $project['id']]);
+    log_activity('project_updated', (int) $project['id'], null, ['install_week_start' => ['old' => $project['install_week_start'], 'new' => $week]]);
+    if ($week && $project['status'] === 'aktivan') {
+        notify_week_scheduled($project, $week);
+    }
+}
+
+function notify_week_scheduled(array $project, string $week): void
+{
+    $mon = new DateTimeImmutable($week);
+    notify(['hala', 'teren'], 'Raspoređeno: ' . project_ref($project) . ' — ned. ' . (int) $mon->format('W') . ' (' . week_range_label($mon) . ')'
+        . ($project['deadline'] ? ', rok ' . fmt_dm($project['deadline']) : ''), (int) $project['id']);
 }
