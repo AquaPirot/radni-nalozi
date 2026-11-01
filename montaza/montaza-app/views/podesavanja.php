@@ -1,4 +1,4 @@
-<?php /** @var array $user @var array $users @var array $errors @var ?array $updates @var ?string $updatesError */
+<?php /** @var array $user @var array $users @var array $errors @var ?array $updates @var ?string $updatesError @var array $teamsAll @var array $typesAll @var array $tplAll */
 $token = (string) setting('telegram_bot_token', '');
 $tgOn = $token !== '';
 ?>
@@ -60,12 +60,49 @@ $tgOn = $token !== '';
     </details>
 </section>
 
+<section class="stack">
+    <h2 class="h2">Montažne ekipe</h2>
+    <?php foreach (array_merge($teamsAll, [['id' => 0, 'name' => '', 'leader_id' => null, 'members' => '', 'active' => 1]]) as $tm): $new = !(int) $tm['id']; ?>
+        <details class="rcard<?= $tm['active'] ? '' : ' off' ?>">
+            <summary><span><strong><?= $new ? '+ Nova ekipa' : e($tm['name']) ?></strong><span class="muted small"><?= $new ? 'npr. Marko + ekipa' : e(trim(user_name($tm['leader_id'] ? (int) $tm['leader_id'] : null) . ($tm['members'] ? ' · ' . $tm['members'] : '') . ($tm['active'] ? '' : ' · neaktivna'))) ?></span></span><?= icon('chevron') ?></summary>
+            <form class="stack pad" method="post" action="<?= e(url('podesavanja')) ?>">
+                <?= csrf_field() ?><input type="hidden" name="action" value="team_save"><input type="hidden" name="id" value="<?= (int) $tm['id'] ?>">
+                <label class="field"><span>Naziv</span><input class="input" name="name" value="<?= e($tm['name']) ?>" required></label>
+                <label class="field"><span>Vođa ekipe (dobija obaveštenja o terminima)</span>
+                    <select class="input" name="leader_id"><option value="">—</option><?php foreach ($users as $u): if (!$u['active']) continue; ?><option value="<?= (int) $u['id'] ?>"<?= (int) $tm['leader_id'] === (int) $u['id'] ? ' selected' : '' ?>><?= e($u['name']) ?></option><?php endforeach; ?></select></label>
+                <label class="field"><span>Članovi</span><input class="input" name="members" value="<?= e($tm['members']) ?>" placeholder="npr. Milan, Dejan"></label>
+                <?php if (!$new): ?><label class="check"><input type="checkbox" name="active" value="1"<?= $tm['active'] ? ' checked' : '' ?>><span class="box"></span><span>Aktivna</span></label><?php endif; ?>
+                <button class="btn primary block" type="submit">Sačuvaj ekipu</button>
+            </form>
+        </details>
+    <?php endforeach; ?>
+</section>
+
+<section class="stack">
+    <h2 class="h2">Sistemi i faze proizvodnje</h2>
+    <p class="small muted">Faze se pišu jedna po redu. „(bez slike)" na kraju reda = faza se zatvara bez fotografije. Izmena važi za nove projekte; postojeći ostaju kakvi su.</p>
+    <?php foreach (array_merge($typesAll, [['id' => 0, 'name' => '', 'fields' => '', 'active' => 1]]) as $ty): $new = !(int) $ty['id']; $f = array_filter(explode(',', (string) $ty['fields'])); ?>
+        <details class="rcard<?= $ty['active'] ? '' : ' off' ?>">
+            <summary><span><strong><?= $new ? '+ Nova vrsta sistema' : e($ty['name']) ?></strong><span class="muted small"><?= $new ? '' : e(implode(' › ', $tplAll[$ty['id']] ?? [])) ?></span></span><?= icon('chevron') ?></summary>
+            <form class="stack pad" method="post" action="<?= e(url('podesavanja')) ?>">
+                <?= csrf_field() ?><input type="hidden" name="action" value="type_save"><input type="hidden" name="id" value="<?= (int) $ty['id'] ?>">
+                <label class="field"><span>Naziv</span><input class="input" name="name" value="<?= e($ty['name']) ?>" required></label>
+                <div class="field"><span>Polja specifikacije</span>
+                    <div class="chips"><?php foreach (SPEC_FIELDS as $k => $label): ?><label class="chip-radio"><input type="checkbox" name="fields[]" value="<?= $k ?>"<?= in_array($k, $f, true) ? ' checked' : '' ?>><span><?= e($label) ?></span></label><?php endforeach; ?></div></div>
+                <label class="field"><span>Faze (jedna po redu)</span><textarea class="input mono" name="phases" rows="6"><?= e(implode("\n", $tplAll[$ty['id']] ?? [])) ?></textarea></label>
+                <?php if (!$new): ?><label class="check"><input type="checkbox" name="active" value="1"<?= $ty['active'] ? ' checked' : '' ?>><span class="box"></span><span>Aktivan (nudi se u formi)</span></label><?php endif; ?>
+                <button class="btn primary block" type="submit">Sačuvaj sistem</button>
+            </form>
+        </details>
+    <?php endforeach; ?>
+</section>
+
 <form class="stack" method="post" action="<?= e(url('podesavanja')) ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="settings">
     <h2 class="h2">Pravila</h2>
     <div class="grid3">
-        <label class="field"><span>Montaža / ned.</span><input class="input mono" name="weekly_capacity" type="number" min="1" max="50" value="<?= e(setting('weekly_capacity', '5')) ?>"></label>
+        <label class="field"><span>Okvirno montaža / ned.</span><input class="input mono" name="weekly_capacity" type="number" min="1" max="50" value="<?= e(setting('weekly_capacity', '5')) ?>"></label>
         <label class="field"><span>Slike hala</span><input class="input mono" name="min_photos_hala" type="number" min="0" max="10" value="<?= e(setting('min_photos_hala', '1')) ?>"></label>
         <label class="field"><span>Slike montaža</span><input class="input mono" name="min_photos_montaza" type="number" min="1" max="20" value="<?= e(setting('min_photos_montaza', '3')) ?>"></label>
     </div>

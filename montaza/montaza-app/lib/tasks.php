@@ -275,7 +275,10 @@ function task_reopen(int $id, array $user, string $reason): void
 function task_comment(int $taskId, array $user, string $kind, string $body, ?int $fileId = null): void
 {
     if ($fileId) {
-        attach_temp_files([$fileId], null, ['task_id' => $taskId, 'kind' => 'foto'], (int) $user['id']);
+        $pid = q_val('SELECT project_id FROM tasks WHERE id = ?', [$taskId]);
+        if (!attach_temp_files([$fileId], $pid ? (int) $pid : null, ['task_id' => $taskId, 'kind' => 'foto'], (int) $user['id'])) {
+            $fileId = null;
+        }
     }
     q('INSERT INTO task_comments (task_id, user_id, kind, body, file_id) VALUES (?, ?, ?, ?, ?)',
         [$taskId, $user['id'], $kind, mb_substr($body, 0, 2000), $fileId]);

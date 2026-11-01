@@ -1,116 +1,66 @@
 <?php
 declare(strict_types=1);
 
-// Početni ekran "Danas": šta je NA MENI — zadaci, stavke projekata, zastoji, kašnjenja.
+// "Danas": vlasniku komandna tabla, montažeru "Moj današnji posao", hali nalozi i faze na redu.
 
-$uid = (int) $user['id'];
 $role = $user['role'];
-$isOwner = $role === 'vlasnik';
-$mon = week_monday(today());
-$nextMon = $mon->modify('+1 week')->format('Y-m-d');
+$uid = (int) $user['id'];
+$todayS = today()->format('Y-m-d');
+$ahead = today()->modify('+' . (int) setting('plan_days_ahead', '7') . ' days')->format('Y-m-d');
+$data = ['user' => $user, 'role' => $role];
 
-// 1. Moji otvoreni zadaci
-$myTasks = q_all(
-    "SELECT t.*, a.name AS assigned_name, cb.name AS created_name, NULL AS completed_name, p.customer_name AS project_name
-     FROM tasks t JOIN users a ON a.id = t.assigned_to LEFT JOIN users cb ON cb.id = t.created_by LEFT JOIN projects p ON p.id = t.project_id
-     WHERE t.assigned_to = ? AND t.status <> 'zavrseno'
-     ORDER BY t.status = 'zastoj' DESC, t.priority = 'hitno' DESC, t.due_date IS NULL, t.due_date, t.created_at
-     LIMIT 8",
+// Moji zadaci (svi)
+$data['myTasks'] = q_all(
+    "SELECT t.*, a.name AS assigned_name, cb.name AS created_name, NULL AS completed_name FROM tasks t
+     JOIN users a ON a.id = t.assigned_to LEFT JOIN users cb ON cb.id = t.created_by
+     WHERE t.assigned_to = ? AND t.status <> 'zavrseno' AND t.archived_at IS NULL
+     ORDER BY t.status = 'zastoj' DESC, t.priority = 'hitno' DESC, t.due_date IS NULL, t.due_date LIMIT 8",
     [$uid]
 );
-$myTasksTotal = my_open_tasks($uid);
-
-// 2. Stavke projekata koje čekaju mene (moja uloga)
-$itemWhere = "p.status = 'aktivan' AND i.status <> 'zavrseno' AND i.responsible = ?";
-$params = [$role];
-if ($role === 'teren') {
-    // teren: ova i sledeća nedelja, prošle nedelje, i reklamacije bez nedelje
-    $itemWhere .= " AND (p.install_week_start <= ? OR (p.install_week_start IS NULL AND p.type = 'reklamacija'))";
-    $params[] = $nextMon;
-}
-$myItems = q_all(
-    "SELECT i.*, p.customer_name, p.city, p.install_week_start, p.deadline, p.type, p.payment_when, p.payment_confirmed_at
-     FROM project_items i JOIN projects p ON p.id = i.project_id
-     WHERE $itemWhere
-     ORDER BY i.status = 'zastoj' DESC, i.status = 'u_toku' DESC, p.install_week_start IS NULL, p.install_week_start,
-              COALESCE(i.due_date, p.deadline) IS NULL, COALESCE(i.due_date, p.deadline), i.sort
-     LIMIT 60",
-    $params
-);
-// Hala: samo stavke koje su "na redu" (prethodne stavke hale završene ili paralelne) — prikazujemo sve otvorene, sortirano.
-// Teren: montaža je "spremna" kad je pakovanje gotovo.
-$readyIds = [];
-if ($myItems) {
-    $pids = array_unique(array_column($myItems, 'project_id'));
-    $all = load_items_for($pids);
-    foreach ($myItems as $it) {
-        $items = $all[$it['project_id']] ?? [];
-        $cur = current_item($items);
-        if ($cur && (int) $cur['id'] === (int) $it['id']) {
-            $readyIds[$it['id']] = true;
-        }
-    }
-}
-// Prikaži samo ono što može da se radi sada; ostalo samo prebroj
-$waitingCount = 0;
-$myItems = array_values(array_filter($myItems, function ($it) use ($readyIds, &$waitingCount) {
-    $now = isset($readyIds[$it['id']]) || in_array($it['status'], ['u_toku', 'zastoj'], true);
-    if (!$now) {
-        $waitingCount++;
-    }
-    return $now;
-}));
-$myItems = array_slice($myItems, 0, 15);
-
-// 3. Zastoji (vlasnik: svi; ostali: na njihovim stavkama/zadacima)
-[$vis, $vp] = visibility_sql($user);
-$stops = q_all(
-    "SELECT s.*, p.customer_name, p.city, t.title AS task_title, i.kind AS item_kind
-     FROM stoppages s
-     LEFT JOIN projects p ON p.id = s.project_id
-     LEFT JOIN project_items i ON i.id = s.item_id
-     LEFT JOIN tasks t ON t.id = s.task_id
-     WHERE s.resolved_at IS NULL" . ($isOwner ? '' : ' AND (i.responsible = ? OR t.assigned_to = ? OR t.created_by = ?)') . "
-     ORDER BY s.created_at",
-    $isOwner ? [] : [$role, $uid, $uid]
-);
-
-// 4. Vlasnik: šta kasni, nije raspoređeno, zadaci koje je dao drugima
-$late = $isOwner ? q_all("SELECT * FROM projects WHERE status = 'aktivan' AND deadline < CURDATE() ORDER BY deadline LIMIT 10") : [];
-$unscheduled = $isOwner ? (int) q_val("SELECT COUNT(*) FROM projects WHERE status = 'aktivan' AND install_week_start IS NULL") : 0;
-$given = q_all(
+$data['given'] = q_all(
     "SELECT t.*, a.name AS assigned_name, NULL AS completed_name FROM tasks t JOIN users a ON a.id = t.assigned_to
-     WHERE t.created_by = ? AND t.assigned_to <> ? AND t.status <> 'zavrseno'
-     ORDER BY t.status = 'zastoj' DESC, t.due_date IS NULL, t.due_date LIMIT 6",
+     WHERE t.created_by = ? AND t.assigned_to <> ? AND t.status <> 'zavrseno' AND t.archived_at IS NULL
+     ORDER BY t.accepted_at IS NOT NULL, t.due_date IS NULL, t.due_date LIMIT 8",
     [$uid, $uid]
 );
 
-// 5. Montaže ove nedelje
-$week = q_all(
-    "SELECT p.* FROM projects p WHERE $vis AND p.status = 'aktivan' AND p.install_week_start = ? ORDER BY p.deadline IS NULL, p.deadline",
-    array_merge($vp, [$mon->format('Y-m-d')])
-);
-$weekItems = load_items_for(array_column($week, 'id'));
-$weekStops = open_stoppages_for(array_column($week, 'id'));
+if ($role === 'vlasnik') {
+    $data['decisions'] = owner_decisions($user);
+    $data['stops'] = open_stops_list($user);
+    $data['late'] = late_list($user);
+    [$data['payList'], $data['paySum']] = due_payments();
+    $data['today'] = visits_between($todayS, $todayS);
+    $data['next'] = array_values(array_filter(visits_between(today()->modify('+1 day')->format('Y-m-d'), $ahead), fn($v) => $v['start_date'] > $todayS));
+} elseif ($role === 'teren') {
+    $data['today'] = visits_between($todayS, $todayS);
+    $data['next'] = array_values(array_filter(visits_between(today()->modify('+1 day')->format('Y-m-d'), $ahead), fn($v) => $v['start_date'] > $todayS));
+    $data['stops'] = open_stops_list($user);
+} else { // hala
+    $data['orders'] = q_all(
+        "SELECT o.*, p.customer_name, p.city FROM project_orders o JOIN projects p ON p.id = o.project_id
+         WHERE o.accepted_at IS NULL AND p.status = 'aktivan' AND p.archived_at IS NULL
+           AND o.version = (SELECT MAX(version) FROM project_orders o2 WHERE o2.project_id = o.project_id)
+         ORDER BY o.issued_at"
+    );
+    // Faze na redu: prva nezavršena faza svakog sistema, uz preuzet nalog; sortirano po terminu montaže
+    $rows = q_all(
+        "SELECT ph.*, p.customer_name, p.city, s.qty, s.width, s.length, s.height, t.name AS type_name,
+                (SELECT MIN(v.start_date) FROM visits v WHERE v.project_id = p.id AND v.status = 'planiran' AND v.start_date IS NOT NULL) AS next_date
+         FROM production_phases ph
+         JOIN projects p ON p.id = ph.project_id JOIN project_systems s ON s.id = ph.system_id LEFT JOIN system_types t ON t.id = s.system_type_id
+         WHERE p.status = 'aktivan' AND p.archived_at IS NULL AND ph.status <> 'zavrseno'
+           AND ph.sort = (SELECT MIN(x.sort) FROM production_phases x WHERE x.system_id = ph.system_id AND x.status <> 'zavrseno')
+           AND EXISTS (SELECT 1 FROM project_orders o WHERE o.project_id = p.id AND o.accepted_at IS NOT NULL
+                       AND o.version = (SELECT MAX(version) FROM project_orders o2 WHERE o2.project_id = p.id))
+         ORDER BY ph.status = 'zastoj' DESC, ph.status = 'u_toku' DESC, next_date IS NULL, next_date, ph.due_date IS NULL, ph.due_date"
+    );
+    $data['phases'] = $rows;
+    $data['stops'] = open_stops_list($user);
+}
 
-$days = ['nedelja', 'ponedeljak', 'utorak', 'sreda', 'četvrtak', 'petak', 'subota'];
 $hour = (int) date('G');
-view('danas', [
-    'title'        => 'Danas',
-    'eyebrow'      => mb_strtoupper($days[(int) date('w')] . ' ' . date('j.n.')) . ' · ' . mb_strtoupper(($hour < 12 ? 'Dobro jutro' : ($hour < 18 ? 'Dobar dan' : 'Dobro veče')) . ', ' . $user['name']),
-    'tab'          => 'danas',
-    'user'         => $user,
-    'myTasks'      => $myTasks,
-    'myTasksTotal' => $myTasksTotal,
-    'myItems'      => $myItems,
-    'readyIds'     => $readyIds,
-    'waitingCount' => $waitingCount,
-    'stops'        => $stops,
-    'late'         => $late,
-    'unscheduled'  => $unscheduled,
-    'given'        => $given,
-    'week'         => $week,
-    'weekItems'    => $weekItems,
-    'weekStops'    => $weekStops,
-    'mon'          => $mon,
+view('danas', $data + [
+    'title'   => 'Danas',
+    'eyebrow' => mb_strtoupper(DAYS_FULL[(int) date('w')] . ', ' . date('j') . '. ' . MONTHS_FULL[(int) date('n')]) . ' · ' . mb_strtoupper(($hour < 12 ? 'Dobro jutro' : ($hour < 18 ? 'Dobar dan' : 'Dobro veče')) . ', ' . $user['name']),
+    'tab'     => 'danas',
 ]);

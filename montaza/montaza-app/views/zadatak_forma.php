@@ -1,8 +1,8 @@
 <?php /** @var array $user @var bool $isNew @var ?array $task @var array $v @var array $errors @var array $people @var array $projects */
 $err = fn(string $k) => isset($errors[$k]) ? '<div class="field-err">' . e($errors[$k]) . '</div>' : '';
 ?>
-<form class="stack" method="post" action="<?= e($isNew ? url('novi_zadatak') : url('izmeni_zadatak', ['id' => $task['id']])) ?>" novalidate>
-    <?= csrf_field() ?>
+<form class="stack" method="post" action="<?= e($isNew ? url('novi_zadatak') : url('izmeni_zadatak', ['id' => $task['id']])) ?>" novalidate<?= $isNew ? ' data-autosave="novi-zadatak"' : '' ?>>
+    <?= csrf_field() ?><?= once_field() ?>
     <label class="field"><span>Šta treba uraditi</span>
         <input class="input" name="title" value="<?= e($v['title']) ?>" maxlength="200" placeholder="Npr. Odvesti beli kombi na servis" required autofocus>
         <?= $err('title') ?></label>
@@ -20,9 +20,16 @@ $err = fn(string $k) => isset($errors[$k]) ? '<div class="field-err">' . e($erro
     <label class="field"><span>Detalji (opciono)</span>
         <textarea class="input" name="description" rows="3" placeholder="Šta tačno, gde, koliko…"><?= e($v['description']) ?></textarea></label>
 
-    <label class="field"><span>Rok</span>
-        <input class="input mono" type="date" name="due_date" value="<?= e($v['due_date']) ?>">
-        <?= $err('due_date') ?></label>
+    <div class="field">
+        <span>Rok</span>
+        <div class="btn-row" data-deadline>
+            <input class="input mono grow" type="date" name="due_date" value="<?= e((string) $v['due_date']) ?>" aria-label="Datum">
+            <input class="input mono" type="time" name="due_time" value="<?= e($v['due_time'] ? substr((string) $v['due_time'], 0, 5) : '') ?>" aria-label="Vreme (opciono)" style="max-width:8.5rem">
+        </div>
+        <label class="check row"><input type="checkbox" name="no_deadline" value="1"<?= !empty($v['no_deadline']) && !$v['due_date'] ? ' checked' : '' ?>><span class="box"></span><span>Bez roka</span></label>
+        <span class="small muted">Vreme je opciono. Bez roka označi samo kad zaista nije bitno kada.</span>
+        <?= $err('due_date') ?>
+    </div>
 
     <div class="toggles">
         <div class="toggle-row">
@@ -47,11 +54,3 @@ $err = fn(string $k) => isset($errors[$k]) ? '<div class="field-err">' . e($erro
     <button class="btn primary block" type="submit"><?= $isNew ? 'Zadaj zadatak' : 'Sačuvaj izmene' ?></button>
 </form>
 
-<?php if (!$isNew): ?>
-    <form method="post" action="<?= e(url() . 'api/zadatak.php') ?>" class="danger-zone" data-confirm="Obrisati zadatak „<?= e($task['title']) ?>"?">
-        <?= csrf_field() ?>
-        <input type="hidden" name="action" value="delete">
-        <input type="hidden" name="id" value="<?= (int) $task['id'] ?>">
-        <button class="btn warn block" type="submit"><?= icon('trash', 20) ?>Obriši zadatak</button>
-    </form>
-<?php endif; ?>

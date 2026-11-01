@@ -8,6 +8,7 @@ if (!$task || !can_view_task($user, $task)) {
     return;
 }
 $photos = q_all("SELECT * FROM files WHERE task_id = ? ORDER BY id", [$task['id']]);
+$comments = task_comments((int) $task['id']);
 $stop = $task['status'] === 'zastoj' ? q_one('SELECT * FROM stoppages WHERE task_id = ? AND resolved_at IS NULL ORDER BY id DESC LIMIT 1', [$task['id']]) : null;
 
 view('zadatak', [
@@ -19,6 +20,7 @@ view('zadatak', [
     'task'     => $task,
     'photos'   => $photos,
     'stop'     => $stop,
+    'comments' => $comments,
     'topExtra' => (can_edit_task($user, $task) ? '<a class="icon-btn" href="' . e(url('izmeni_zadatak', ['id' => $task['id']])) . '" aria-label="Izmeni">' . icon('edit') . '</a>' : '')
         . '<a class="icon-btn" href="' . e(url('zadaci')) . '" aria-label="Zatvori">' . icon('close') . '</a>',
 ]);

@@ -210,6 +210,19 @@
         if (form) gate(form);
     });
 
+    // ══ Rok zadatka: "Bez roka" isključuje datum i vreme ══════
+    function syncDeadline(box) {
+        const wrap = box.closest('.field');
+        wrap.querySelectorAll('[data-deadline] input').forEach((i) => {
+            i.disabled = box.checked;
+            if (box.checked) i.value = '';
+        });
+    }
+    document.querySelectorAll('input[name=no_deadline]').forEach((b) => {
+        syncDeadline(b);
+        b.addEventListener('change', () => syncDeadline(b));
+    });
+
     // ══ Sistemi u formi projekta ══════════════════════════════
     let phaseTpl = {};
     try { phaseTpl = JSON.parse((document.getElementById('phase-tpl') || {}).textContent || '{}'); } catch (_) {}

@@ -106,6 +106,53 @@ if (is_post()) {
             flash('ok', 'Nalog je otključan.');
             break;
 
+        case 'team_save':
+            $tid = (int) ($_POST['id'] ?? 0);
+            $name = trim((string) ($_POST['name'] ?? ''));
+            if ($name === '') {
+                $errors[] = 'Upiši naziv ekipe.';
+                break;
+            }
+            $leader = (int) ($_POST['leader_id'] ?? 0) ?: null;
+            $members = mb_substr(trim((string) ($_POST['members'] ?? '')), 0, 255) ?: null;
+            $active = $tid ? (int) !empty($_POST['active']) : 1;
+            if ($tid) {
+                q('UPDATE teams SET name = ?, leader_id = ?, members = ?, active = ? WHERE id = ?', [$name, $leader, $members, $active, $tid]);
+            } else {
+                q('INSERT INTO teams (name, leader_id, members, sort) VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort), 0) + 10 FROM teams t2))', [$name, $leader, $members]);
+            }
+            log_activity('team_saved', null, null, ['name' => $name]);
+            flash('ok', "Ekipa „{$name}\" je sačuvana.");
+            break;
+
+        case 'type_save':
+            $tid = (int) ($_POST['id'] ?? 0);
+            $name = trim((string) ($_POST['name'] ?? ''));
+            $phases = array_values(array_filter(array_map('trim', preg_split('/\R/', (string) ($_POST['phases'] ?? '')))));
+            if ($name === '' || !$phases) {
+                $errors[] = 'Sistem mora imati naziv i bar jednu fazu.';
+                break;
+            }
+            $fields = implode(',', array_values(array_intersect(array_keys(SPEC_FIELDS), (array) ($_POST['fields'] ?? []))));
+            $active = $tid ? (int) !empty($_POST['active']) : 1;
+            db()->beginTransaction();
+            if ($tid) {
+                q('UPDATE system_types SET name = ?, fields = ?, active = ? WHERE id = ?', [$name, $fields, $active, $tid]);
+                q('DELETE FROM phase_templates WHERE system_type_id = ?', [$tid]);
+            } else {
+                q('INSERT INTO system_types (name, fields, sort) VALUES (?, ?, (SELECT COALESCE(MAX(sort), 0) + 10 FROM system_types s2))', [$name, $fields]);
+                $tid = (int) db()->lastInsertId();
+            }
+            foreach ($phases as $i => $ph) {
+                $noPhoto = str_ends_with($ph, '(bez slike)');
+                q('INSERT INTO phase_templates (system_type_id, name, sort, requires_photo) VALUES (?, ?, ?, ?)',
+                    [$tid, mb_substr(trim(str_replace('(bez slike)', '', $ph)), 0, 100), ($i + 1) * 10, (int) !$noPhoto]);
+            }
+            db()->commit();
+            log_activity('system_type_saved', null, null, ['name' => $name, 'phases' => count($phases)]);
+            flash('ok', "Sistem „{$name}\" je sačuvan. Važi za nove projekte.");
+            break;
+
         case 'test_telegram':
             $to = trim((string) ($_POST['chat_id'] ?? ''));
             $err = telegram_send($to, 'Montaža — test poruka. Obaveštenja rade. ' . date('j.n. H:i'));
@@ -139,7 +186,17 @@ $users = q_all("SELECT u.*, (SELECT COUNT(*) FROM login_attempts a WHERE a.usern
                        (SELECT COUNT(*) FROM push_subscriptions s WHERE s.user_id = u.id) AS phones
                 FROM users u ORDER BY active DESC, FIELD(role, 'vlasnik', 'hala', 'teren'), name");
 
+$teamsAll = q_all('SELECT * FROM teams ORDER BY active DESC, sort, name');
+$typesAll = q_all('SELECT * FROM system_types ORDER BY active DESC, sort, name');
+$tplAll = [];
+foreach (q_all('SELECT * FROM phase_templates ORDER BY sort') as $t) {
+    $tplAll[$t['system_type_id']][] = $t['name'] . ($t['requires_photo'] ? '' : ' (bez slike)');
+}
+
 view('podesavanja', [
+    'teamsAll'     => $teamsAll,
+    'typesAll'     => $typesAll,
+    'tplAll'       => $tplAll,
     'title'        => 'Podešavanja',
     'tab'          => 'podesavanja',
     'user'         => $user,

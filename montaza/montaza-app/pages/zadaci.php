@@ -5,16 +5,18 @@ declare(strict_types=1);
 
 $isOwner = $user['role'] === 'vlasnik';
 $filters = $isOwner
-    ? ['otvoreni' => 'Otvoreni', 'moji' => 'Moji', 'zavrseno' => 'Završeno']
-    : ['moji' => 'Moji', 'zadao' => 'Zadao sam', 'zavrseno' => 'Završeno'];
+    ? ['otvoreni' => 'Otvoreni', 'moji' => 'Moji', 'zadao' => 'Zadao sam', 'bez_roka' => 'Bez roka', 'zavrseno' => 'Završeno']
+    : ['moji' => 'Moji', 'zadao' => 'Zadao sam', 'bez_roka' => 'Bez roka', 'zavrseno' => 'Završeno'];
 $f = isset($filters[$_GET['f'] ?? '']) ? $_GET['f'] : array_key_first($filters);
 
 [$vis, $vp] = task_visibility_sql($user);
+$vis .= ' AND t.archived_at IS NULL';
 $uid = (int) $user['id'];
 $conds = [
     'otvoreni' => ["t.status <> 'zavrseno'", []],
     'moji'     => ["t.status <> 'zavrseno' AND t.assigned_to = ?", [$uid]],
     'zadao'    => ["t.status <> 'zavrseno' AND t.created_by = ? AND t.assigned_to <> ?", [$uid, $uid]],
+    'bez_roka' => ["t.status <> 'zavrseno' AND t.due_date IS NULL", []],
     'zavrseno' => ["t.status = 'zavrseno' AND t.completed_at > (NOW() - INTERVAL 60 DAY)", []],
 ];
 $counts = [];
@@ -25,7 +27,7 @@ foreach ($filters as $k => $_) {
 [$c, $cp] = $conds[$f];
 $order = $f === 'zavrseno'
     ? 't.completed_at DESC'
-    : "t.status = 'zastoj' DESC, t.priority = 'hitno' DESC, t.due_date IS NULL, t.due_date, t.created_at DESC";
+    : "t.status = 'zastoj' DESC, t.priority = 'hitno' DESC, t.due_date IS NULL, t.due_date, t.due_time IS NULL, t.due_time, t.created_at DESC";
 $tasks = q_all(
     "SELECT t.*, a.name AS assigned_name, cb.name AS created_name, d.name AS completed_name,
             p.customer_name AS project_name

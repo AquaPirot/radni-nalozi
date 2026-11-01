@@ -1,137 +1,169 @@
 <?php
-/** @var int $waitingCount @var array $user @var array $myTasks @var int $myTasksTotal @var array $myItems @var array $readyIds @var array $stops @var array $late @var int $unscheduled @var array $given @var array $week @var array $weekItems @var array $weekStops @var DateTimeImmutable $mon */
-$isOwner = $user['role'] === 'vlasnik';
-$nothing = !$myTasks && !$myItems && !$stops && !$late && !$given;
+/** @var array $user @var string $role @var array $myTasks @var array $given */
+$item = function (array $x): string {
+    return '<a class="react' . (!empty($x['hot']) ? ' hot' : '') . '" href="' . e($x['url']) . '"><span class="grow"><strong>' . e($x['title']) . '</strong><span>' . e($x['why']) . '</span></span>' . icon('chevron') . '</a>';
+};
+$taskRow = function (array $t, bool $given = false) use ($user): string {
+    [$tl, $tc] = task_status_line($t);
+    $sub = $given ? $t['assigned_name'] . ' · ' . $tl : $tl . ($t['created_by'] && (int) $t['created_by'] !== (int) $user['id'] ? ' · od ' . $t['created_name'] : '');
+    $h = '<div class="list-row task-row"><a class="grow" href="' . e(url('zadatak', ['id' => $t['id']])) . '"><span class="strong">' . e($t['title']) . '</span>'
+        . ($t['priority'] === 'hitno' ? ' <span class="pill st-zastoj">Hitno</span>' : '')
+        . '<br><span class="small status ' . e($tc) . '"><i></i>' . e($sub) . ($t['due_date'] ? ' · rok ' . e(fmt_dm($t['due_date'])) . ($t['due_time'] ? ' ' . e(substr($t['due_time'], 0, 5)) : '') : ' · bez roka') . '</span></a>';
+    if (!$given && empty($t['accepted_at'])) {
+        $h .= action_button('task_accept', (int) $t['id'], 'Preuzimam', 'btn ghost sm');
+    }
+    return $h . '</div>';
+};
+$visitBlock = function (array $v, bool $big) use ($user): string {
+    $b = bundle_one((int) $v['pid']);
+    $p = $b['p'];
+    $pay = payment_info($b);
+    $nav = trim(implode(', ', array_filter([$p['address'], $p['city']])));
+    $order = current_order($b['orders']);
+    $future = $v['start_date'] > today()->format('Y-m-d');
+    $multi = (int) $v['days'] > 1 ? ($future ? ' · ' . (int) $v['days'] . ' dana' : ' · dan ' . ((int) (new DateTimeImmutable($v['start_date']))->diff(today())->days + 1) . '/' . (int) $v['days']) : '';
+    $dayLbl = ['ned', 'pon', 'uto', 'sre', 'čet', 'pet', 'sub'][(int) date('w', strtotime($v['start_date']))] . ' ' . fmt_dm($v['start_date']) . ' · ';
+    $h = '<section class="job' . ($big ? ' big' : '') . '">';
+    $h .= '<div class="row-between"><span class="time-chip mono">' . e(($future ? $dayLbl : '') . ($v['start_time'] ? substr($v['start_time'], 0, 5) : 'ceo dan')) . e($multi) . '</span>'
+        . '<span class="pill ' . ($v['status'] === 'u_toku' ? 'st-u_toku">U radu' : ($v['confirmed'] ? 'st-zavrseno">Potvrđeno' : 'st-ceka">Okvirno')) . '</span></div>';
+    $h .= '<a href="' . e(url('projekat', ['id' => $p['id'], 't' => 'montaza'])) . '"><h3>' . e($p['customer_name']) . ($p['city'] ? ' · ' . e($p['city']) : '') . '</h3></a>';
+    if ($p['address']) {
+        $h .= '<div class="muted">' . e($p['address']) . '</div>';
+    }
+    $h .= '<div>' . e(VISIT_KINDS[$v['kind']]) . ($b['systems'] ? ': ' . e(systems_summary($b['systems'], 5)) : '') . '</div>';
+    $h .= '<div class="small muted">' . icon('users', 14) . ' ' . e($v['team_name'] ?? 'ekipa') . '</div>';
+    if ($big) {
+        if ($b['stops']) {
+            $h .= '<div class="small warn">' . e(stoppage_text($b['stops'][0], $v)) . '</div>';
+        }
+        if (trim((string) $v['note']) !== '') {
+            $h .= '<div class="note">' . nl2br(e(trim($v['note']))) . '</div>';
+        }
+        if (can_see_payment($user) && $p['payment_collector'] === 'teren' && $pay['remaining'] > 0 && $p['payment_when'] !== 'ne') {
+            $h .= '<div class="paynote">' . icon('cash', 18) . ' Naplatiti ' . e(fmt_money((string) $pay['remaining'])) . ' — ' . e(mb_strtolower(PAYMENT_LABELS[$p['payment_when']])) . '</div>';
+        }
+        $h .= '<div class="btn-row">';
+        if ($p['phone']) {
+            $h .= '<a class="btn ghost grow" href="tel:' . e(preg_replace('/[^\d+]/', '', $p['phone'])) . '">' . icon('phone', 18) . 'Pozovi</a>';
+        }
+        if ($nav !== '') {
+            $h .= '<a class="btn ghost grow" href="https://www.google.com/maps/search/?api=1&amp;query=' . e(rawurlencode($nav)) . '" target="_blank" rel="noopener">' . icon('nav', 18) . 'Navigacija</a>';
+        }
+        $h .= '</div><div class="btn-row">';
+        if ($order && $order['file_id']) {
+            $h .= '<a class="btn ghost sm grow" href="' . e(file_url((int) $order['file_id'])) . '" target="_blank" rel="noopener">' . icon('file', 16) . 'Nalog / crteži</a>';
+        }
+        $h .= '<a class="btn ghost sm grow" href="' . e(url('galerija', ['id' => $p['id']])) . '">' . icon('image', 16) . 'Fotografije</a></div>';
+        if (can_act_visit($user, $p, $v)) {
+            $h .= '<div class="btn-row">';
+            if ($v['status'] === 'planiran') {
+                $h .= '<a class="btn primary grow" href="' . e(url('projekat', ['id' => $p['id'], 't' => 'montaza'])) . '">' . icon('play', 18) . 'Počinjem</a>';
+            } else {
+                $h .= '<a class="btn primary grow" href="' . e(url('teren_zavrsi', ['id' => $v['id']])) . '">' . icon('check', 18) . 'Završi</a>';
+            }
+            $h .= '<a class="btn warn" href="' . e(url('zastoj', ['visit' => $v['id']])) . '">Problem</a></div>';
+        }
+    }
+    return $h . '</section>';
+};
 ?>
-<div class="counters">
-    <a class="counter<?= $myTasksTotal ? ' on' : '' ?>" href="<?= e(url('zadaci')) ?>"><strong><?= $myTasksTotal ?></strong><span>moji zadaci</span></a>
-    <a class="counter" href="#na-meni"><strong><?= count($myItems) ?></strong><span><?= $isOwner ? 'nalozi' : 'na redu' ?></span></a>
-    <a class="counter<?= $stops ? ' warn' : '' ?>" href="#zastoji"><strong><?= count($stops) ?></strong><span>zastoji</span></a>
-    <?php if ($isOwner): ?>
-        <a class="counter<?= $late ? ' warn' : '' ?>" href="#kasni"><strong><?= count($late) ?></strong><span>kasni</span></a>
-    <?php else: ?>
-        <a class="counter" href="#nedelja"><strong><?= count($week) ?></strong><span>montaže</span></a>
-    <?php endif; ?>
-</div>
 
-<?php if ($nothing): ?>
-    <div class="empty"><?= icon('check', 32) ?><p>Sve je čisto — nema ničeg na tebi.</p></div>
-<?php endif; ?>
+<?php if ($role === 'vlasnik'):
+    /** @var array $decisions @var array $stops @var array $late @var array $payList @var float $paySum @var array $today @var array $next */ ?>
+    <div class="kpis">
+        <a class="kpi<?= $decisions ? ' on' : '' ?>" href="<?= e(url('pregled', ['f' => 'odluka'])) ?>"><?= icon('file', 22) ?><strong><?= count($decisions) ?></strong><span>Traži odluku</span></a>
+        <a class="kpi<?= $stops ? ' warn' : '' ?>" href="<?= e(url('pregled', ['f' => 'zastoj'])) ?>"><?= icon('alert', 22) ?><strong><?= count($stops) ?></strong><span>U zastoju</span></a>
+        <a class="kpi<?= $late ? ' warn' : '' ?>" href="<?= e(url('pregled', ['f' => 'kasni'])) ?>"><?= icon('plan', 22) ?><strong><?= count($late) ?></strong><span>Kasni</span></a>
+        <a class="kpi" href="<?= e(url('pregled', ['f' => 'naplata'])) ?>"><?= icon('cash', 22) ?><strong class="mono"><?= e(fmt_money((string) $paySum)) ?></strong><span>Za naplatu</span></a>
+    </div>
 
-<?php if ($stops): ?>
-    <section class="stack" id="zastoji">
-        <h2 class="sec-head"><span>ZASTOJI</span><span class="warn"><?= count($stops) ?></span></h2>
-        <div class="list">
-            <?php foreach ($stops as $s): ?>
-                <a class="list-row" href="<?= e($s['task_id'] ? url('zadatak', ['id' => $s['task_id']]) : url('projekat', ['id' => $s['project_id']])) ?>">
-                    <span><span class="strong"><?= e($s['task_title'] ?: $s['customer_name']) ?></span>
-                        <br><span class="small status warn"><i></i><?= e(($s['item_kind'] ? ITEM_LABELS[$s['item_kind']] . ': ' : '') . ($s['note'] ?: REASON_LABELS[$s['reason']])) ?></span></span><?= icon('chevron') ?>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    </section>
-<?php endif; ?>
-
-<?php if ($myTasks): ?>
     <section class="stack">
-        <h2 class="sec-head"><span>MOJI ZADACI</span><a href="<?= e(url('zadaci')) ?>"><?= $myTasksTotal > count($myTasks) ? 'svi (' . $myTasksTotal . ')' : 'svi' ?> ›</a></h2>
-        <div class="list">
-            <?php foreach ($myTasks as $t): [$tl, $tc] = task_status_line($t); ?>
-                <div class="list-row task-row">
-                    <a class="grow" href="<?= e(url('zadatak', ['id' => $t['id']])) ?>">
-                        <span class="strong"><?= e($t['title']) ?></span><?php if ($t['priority'] === 'hitno'): ?> <span class="tag warn">HITNO</span><?php endif; ?>
-                        <br><span class="small status <?= e($tc) ?>"><i></i><?= e($tl) ?><?= $t['due_date'] ? ' · rok ' . e(fmt_dm($t['due_date'])) : '' ?><?= $t['created_by'] && (int) $t['created_by'] !== (int) $user['id'] ? ' · od ' . e($t['created_name']) : '' ?></span>
-                    </a>
-                    <?php if ($t['requires_photo']): ?>
-                        <a class="btn primary sm" href="<?= e(url('zadatak_zavrsi', ['id' => $t['id']])) ?>" aria-label="Završi uz sliku"><?= icon('camera', 18) ?></a>
-                    <?php else: ?>
-                        <form method="post" action="<?= e(url() . 'api/zadatak.php') ?>">
-                            <?= csrf_field() ?><input type="hidden" name="action" value="done"><input type="hidden" name="id" value="<?= (int) $t['id'] ?>"><input type="hidden" name="back" value="danas">
-                            <button class="btn primary sm" type="submit" aria-label="Završeno"><?= icon('check', 18) ?></button>
-                        </form>
-                    <?php endif; ?>
+        <h2 class="sec-head"><span>POTREBNA REAKCIJA</span><?php if (count($decisions) > 4): ?><a href="<?= e(url('pregled', ['f' => 'odluka'])) ?>">sve (<?= count($decisions) ?>) ›</a><?php endif; ?></h2>
+        <?php if ($decisions): ?>
+            <div class="reacts"><?php foreach (array_slice($decisions, 0, 4) as $x) { echo $item($x); } ?></div>
+        <?php else: ?>
+            <p class="ok-note"><?= icon('check', 18) ?> Ništa ne čeka tvoju odluku.</p>
+        <?php endif; ?>
+    </section>
+
+    <section class="stack">
+        <h2 class="sec-head"><span>ZASTOJI I KAŠNJENJA</span></h2>
+        <?php $sl = array_merge($stops, array_filter($late, fn($x) => !str_contains($x['why'], ' — '))); ?>
+        <?php if ($sl): ?>
+            <div class="reacts"><?php foreach (array_slice($sl, 0, 5) as $x) { echo $item($x); } ?></div>
+        <?php else: ?>
+            <p class="ok-note"><?= icon('check', 18) ?> Nema otvorenih zastoja ni kašnjenja.</p>
+        <?php endif; ?>
+    </section>
+
+    <section class="stack">
+        <h2 class="sec-head"><span>DANAS NA TERENU</span><a href="<?= e(url('plan')) ?>">plan ›</a></h2>
+        <?php if ($today): foreach ($today as $v) { echo $visitBlock($v, false); } else: ?>
+            <p class="small muted">Danas nema termina na terenu.</p>
+        <?php endif; ?>
+    </section>
+
+    <section class="stack">
+        <h2 class="sec-head"><span>SLEDEĆIH 7 DANA</span><span><?= count($next) ?></span></h2>
+        <?php if ($next): ?>
+            <div class="list">
+                <?php foreach ($next as $v): ?>
+                    <a class="list-row" href="<?= e(url('projekat', ['id' => $v['pid'], 't' => 'montaza'])) ?>">
+                        <span><span class="mono small"><?= e(visit_when($v)) ?></span><br><strong><?= e($v['customer_name']) ?></strong> <span class="muted"><?= e($v['city']) ?> · <?= e(VISIT_KINDS[$v['kind']]) ?> · <?= e($v['team_name'] ?? 'bez ekipe') ?></span></span>
+                        <span class="pill <?= $v['confirmed'] ? 'st-zavrseno' : 'st-ceka' ?>"><?= $v['confirmed'] ? 'Potvrđeno' : 'Okvirno' ?></span></a>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?><p class="small muted">Nema zakazanih termina — <a class="accent" href="<?= e(url('plan', ['f' => 'neraspored'])) ?>">rasporedi</a>.</p><?php endif; ?>
+    </section>
+
+    <section class="stack">
+        <h2 class="sec-head"><span>ZADACI KOJE SI ZADAO</span><a href="<?= e(url('zadaci', ['f' => 'otvoreni'])) ?>">svi ›</a></h2>
+        <?php if ($given): ?><div class="list"><?php foreach ($given as $t) { echo $taskRow($t, true); } ?></div>
+        <?php else: ?><p class="small muted">Nema otvorenih zadataka koje si zadao.</p><?php endif; ?>
+    </section>
+    <a class="fab" href="<?= e(url('novi')) ?>"><?= icon('plus') ?><span>Novi projekat</span></a>
+
+<?php elseif ($role === 'teren'):
+    /** @var array $today @var array $next @var array $stops */ ?>
+    <h2 class="sec-head"><span>MOJ DANAŠNJI POSAO</span><span><?= count($today) ?></span></h2>
+    <?php if ($today): foreach ($today as $v) { echo $visitBlock($v, true); } else: ?>
+        <div class="empty"><?= icon('check', 28) ?><p>Danas nema montaže.</p><?php if ($next): ?><p class="small muted">Sledeće: <?= e($next[0]['customer_name']) ?> — <?= e(visit_when($next[0])) ?></p><?php endif; ?></div>
+    <?php endif; ?>
+    <?php if ($stops): ?><section class="stack"><h2 class="sec-head"><span>PROBLEMI NA MENI</span></h2><div class="reacts"><?php foreach ($stops as $x) { echo $item($x); } ?></div></section><?php endif; ?>
+    <?php if ($myTasks): ?><section class="stack"><h2 class="sec-head"><span>MOJI ZADACI</span><a href="<?= e(url('zadaci')) ?>">svi ›</a></h2><div class="list"><?php foreach ($myTasks as $t) { echo $taskRow($t); } ?></div></section><?php endif; ?>
+    <section class="stack">
+        <h2 class="sec-head"><span>SLEDEĆIH 7 DANA</span></h2>
+        <?php if ($next): foreach ($next as $v) { echo $visitBlock($v, false); } else: ?><p class="small muted">Nema zakazanih termina.</p><?php endif; ?>
+    </section>
+    <a class="fab" href="<?= e(url('novi_zadatak')) ?>"><?= icon('plus') ?><span>Zadatak</span></a>
+
+<?php else:
+    /** @var array $orders @var array $phases @var array $stops */ ?>
+    <?php if ($orders): ?>
+        <section class="stack">
+            <h2 class="sec-head"><span>NALOZI ZA PREUZIMANJE</span><span class="warn"><?= count($orders) ?></span></h2>
+            <?php foreach ($orders as $o): ?>
+                <div class="card row-between">
+                    <a href="<?= e(url('projekat', ['id' => $o['project_id'], 't' => 'proizvodnja'])) ?>"><strong><?= e($o['customer_name']) ?></strong> <span class="muted"><?= e($o['city']) ?></span><br><span class="small <?= $o['version'] > 1 ? 'warn' : 'muted' ?>"><?= $o['version'] > 1 ? 'IZMENJEN nalog v' . (int) $o['version'] : 'Nov nalog' ?><?= $o['note'] ? ' · ' . e($o['note']) : '' ?></span></a>
+                    <?= action_button('order_accept', (int) $o['id'], 'Preuzeo', 'btn primary sm', [], null, 'check') ?>
                 </div>
             <?php endforeach; ?>
-        </div>
-    </section>
-<?php endif; ?>
-
-<?php if ($myItems): ?>
-    <section class="stack" id="na-meni">
-        <h2 class="sec-head"><span><?= $isOwner ? 'NALOZI ZA IZDAVANJE' : 'NA REDU U PROJEKTIMA' ?></span><span><?= count($myItems) ?></span></h2>
-        <div class="list">
-            <?php foreach ($myItems as $it):
-                $ready = isset($readyIds[$it['id']]);
-                $cls = match (true) { $it['status'] === 'zastoj' => 'warn', $it['status'] === 'u_toku' => 'live', $ready => 'ok', default => 'idle' };
-                $txt = match (true) {
-                    $it['status'] === 'zastoj' => 'zastoj',
-                    $it['status'] === 'u_toku' => 'u toku',
-                    $ready => 'na redu',
-                    default => 'čeka prethodne',
-                };
-                $when = $it['install_week_start'] ? week_short($it['install_week_start']) : ($it['due_date'] ? 'rok ' . fmt_dm($it['due_date']) : '');
-                $pay = $it['kind'] === 'montaza' && $it['payment_when'] === 'pre' && !$it['payment_confirmed_at'] ? ' · naplata PRE' : '';
-            ?>
-                <a class="list-row" href="<?= e(url('projekat', ['id' => $it['project_id']])) ?>">
-                    <span><span class="strong"><?= e(ITEM_LABELS[$it['kind']]) ?></span> <span class="muted">· <?= e($it['customer_name']) ?><?= $it['city'] ? ', ' . e($it['city']) : '' ?></span>
-                        <br><span class="small status <?= $cls ?>"><i></i><?= e($txt . ($when ? ' · ' . $when : '') . $pay) ?></span></span><?= icon('chevron') ?>
-                </a>
-            <?php endforeach; ?>
-        </div>
-        <?php if ($waitingCount): ?><p class="small muted">+ još <?= $waitingCount ?> <?= $waitingCount === 1 ? 'stavka čeka' : 'stavki čeka' ?> da se završe prethodni koraci.</p><?php endif; ?>
-    </section>
-<?php endif; ?>
-
-<?php if ($late): ?>
-    <section class="stack" id="kasni">
-        <h2 class="sec-head"><span>KASNI</span><span class="warn"><?= count($late) ?></span></h2>
-        <div class="list">
-            <?php foreach ($late as $p): ?>
-                <a class="list-row" href="<?= e(url('projekat', ['id' => $p['id']])) ?>">
-                    <span><span class="strong"><?= e($p['customer_name']) ?></span> <span class="muted"><?= e($p['city']) ?></span>
-                        <br><span class="small status warn"><i></i>rok <?= e(fmt_dm($p['deadline'])) ?> · kasni <?= days_late($p['deadline']) ?> d</span></span><?= icon('chevron') ?>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    </section>
-<?php endif; ?>
-
-<?php if ($given): ?>
-    <section class="stack">
-        <h2 class="sec-head"><span>ZADAO SAM</span><a href="<?= e(url('zadaci', ['f' => $isOwner ? 'otvoreni' : 'zadao'])) ?>">svi ›</a></h2>
-        <div class="list">
-            <?php foreach ($given as $t): [$tl, $tc] = task_status_line($t); ?>
-                <a class="list-row" href="<?= e(url('zadatak', ['id' => $t['id']])) ?>">
-                    <span><span class="strong"><?= e($t['title']) ?></span>
-                        <br><span class="small status <?= e($tc) ?>"><i></i><?= e($t['assigned_name']) ?> · <?= e($tl) ?></span></span><?= icon('chevron') ?>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    </section>
-<?php endif; ?>
-
-<?php if ($isOwner && $unscheduled): ?>
-    <a class="rcard static" href="<?= e(url('plan')) ?>"><span><strong>Nije raspoređeno</strong><span class="muted"><?= $unscheduled ?> projekata čeka nedelju montaže</span></span><?= icon('chevron') ?></a>
-<?php endif; ?>
-
-<section class="stack" id="nedelja">
-    <h2 class="sec-head"><span>MONTAŽE OVE NEDELJE · <?= e(mb_strtoupper(week_short($mon))) ?></span><span><?= count($week) ?></span></h2>
-    <?php if ($week): ?>
-        <div class="list">
-            <?php foreach ($week as $p): [$line, $cls] = project_status_line($p, $weekItems[$p['id']] ?? [], $weekStops[$p['id']] ?? null); ?>
-                <a class="list-row" href="<?= e(url('projekat', ['id' => $p['id']])) ?>">
-                    <span><span class="strong"><?= e($p['customer_name']) ?></span> <span class="muted"><?= e($p['city']) ?></span>
-                        <br><span class="small status <?= e($cls) ?>"><i></i><?= e($line) ?></span></span><?= icon('chevron') ?>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    <?php else: ?>
-        <p class="small muted">Nema montaža ove nedelje.</p>
+        </section>
     <?php endif; ?>
-</section>
-
-<?php if ($isOwner): ?>
-    <a class="fab" href="<?= e(url('novi')) ?>"><?= icon('plus') ?><span>Novi projekat</span></a>
-<?php else: ?>
+    <?php if ($stops): ?><section class="stack"><h2 class="sec-head"><span>PROBLEMI NA MENI</span></h2><div class="reacts"><?php foreach ($stops as $x) { echo $item($x); } ?></div></section><?php endif; ?>
+    <section class="stack">
+        <h2 class="sec-head"><span>NA REDU U PROIZVODNJI</span><span><?= count($phases) ?></span></h2>
+        <?php if ($phases): ?>
+            <div class="list">
+                <?php foreach ($phases as $ph): ?>
+                    <a class="list-row" href="<?= e(url('projekat', ['id' => $ph['project_id'], 't' => 'proizvodnja'])) ?>">
+                        <span><strong><?= e($ph['name']) ?></strong> <span class="muted">· <?= e($ph['customer_name']) ?><?= $ph['city'] ? ', ' . e($ph['city']) : '' ?></span><br>
+                            <span class="small muted"><?= e(system_label(['type_name' => $ph['type_name'], 'qty' => $ph['qty'], 'width' => $ph['width'], 'length' => $ph['length'], 'height' => $ph['height']])) ?><?= $ph['next_date'] ? ' · montaža ' . e(fmt_dm($ph['next_date'])) : '' ?><?= $ph['due_date'] ? ' · rok ' . e(fmt_dm($ph['due_date'])) : '' ?></span></span>
+                        <span class="pill st-<?= e($ph['status']) ?>"><?= e(STATUS_LABELS[$ph['status']]) ?></span></a>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?><p class="ok-note"><?= icon('check', 18) ?> Nema faza na redu.</p><?php endif; ?>
+    </section>
+    <?php if ($myTasks): ?><section class="stack"><h2 class="sec-head"><span>MOJI ZADACI</span><a href="<?= e(url('zadaci')) ?>">svi ›</a></h2><div class="list"><?php foreach ($myTasks as $t) { echo $taskRow($t); } ?></div></section><?php endif; ?>
     <a class="fab" href="<?= e(url('novi_zadatak')) ?>"><?= icon('plus') ?><span>Zadatak</span></a>
 <?php endif; ?>

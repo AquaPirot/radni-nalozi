@@ -15,12 +15,15 @@ $error = null;
 $note = trim((string) ($_POST['note'] ?? ''));
 if (is_post()) {
     csrf_check();
+    if (!once_check()) {
+        redirect(url('zadaci'));
+    }
     try {
-        task_complete((int) $task['id'], $user, $note, uploaded_files('fotos'));
+        task_complete((int) $task['id'], $user, $note, posted_ids('foto_ids'));
         flash('ok', 'Zadatak je završen.');
         redirect(url('zadaci'));
     } catch (RuleError | UploadError $ex) {
-        $error = $ex->getMessage() . ' Slike treba ponovo izabrati.';
+        $error = $ex->getMessage();
     }
 }
 $existing = (int) q_val('SELECT COUNT(*) FROM files WHERE task_id = ?', [$task['id']]);

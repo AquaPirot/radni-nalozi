@@ -1,6 +1,13 @@
-<?php /** @var array $user @var array $task @var array $photos @var ?array $stop */
+<?php /** @var array $user @var array $task @var array $photos @var ?array $stop @var array $comments */
 $t = $task;
 [$line, $lineCls] = task_status_line($t);
+$mine = (int) $t['assigned_to'] === (int) $user['id'];
+$canAct = can_act_task($user, $t);
+$canEdit = can_edit_task($user, $t);
+$open = $t['status'] !== 'zavrseno';
+$late = $open && $t['due_date'] && days_late($t['due_date']);
+$commentPhotos = array_filter(array_column($comments, 'file_id'));
+$photos = array_values(array_filter($photos, fn($f) => !in_array($f['id'], $commentPhotos)));
 ?>
 <section class="stack">
     <h2 class="task-title"><?= e($t['title']) ?></h2>
@@ -10,7 +17,7 @@ $t = $task;
 
 <div class="facts">
     <div class="fact"><span>Kome</span><strong><?= e($t['assigned_name']) ?></strong></div>
-    <div class="fact"><span>Rok</span><strong class="mono<?= $t['status'] !== 'zavrseno' && days_late($t['due_date']) ? ' warn' : '' ?>"><?= $t['due_date'] ? e(fmt_dm($t['due_date'])) : '—' ?></strong></div>
+    <div class="fact"><span>Rok</span><strong class="mono<?= $late ? ' warn' : '' ?>"><?= $t['due_date'] ? e(fmt_dm($t['due_date']) . ($t['due_time'] ? ' ' . substr($t['due_time'], 0, 5) : '')) : 'Bez roka' ?></strong></div>
     <div class="fact"><span>Zadao</span><strong><?= e($t['created_name'] ?? '—') ?></strong></div>
 </div>
 
@@ -21,10 +28,12 @@ $t = $task;
 <?php endif; ?>
 
 <?php if ($stop): ?>
-    <div class="alert warn"><strong>Zastoj:</strong> <?= e(REASON_LABELS[$stop['reason']]) ?><?= $stop['note'] ? ' — ' . e($stop['note']) : '' ?></div>
+    <div class="problem"><strong>Zastoj</strong><span><?= e(stoppage_text($stop)) ?></span>
+        <?php if ($canAct || $canEdit): ?><?= action_button('stoppage_resolve', (int) $stop['id'], 'Rešeno', 'btn ghost sm', [], 'Zastoj je rešen?') ?><?php endif; ?>
+    </div>
 <?php endif; ?>
 
-<?php if ($t['note']): ?>
+<?php if ($t['note'] && !$open): ?>
     <section class="card"><div class="label">NAPOMENA PRI ZAVRŠETKU</div><p><?= nl2br(e($t['note'])) ?></p></section>
 <?php endif; ?>
 
@@ -36,24 +45,61 @@ $t = $task;
     </div>
 <?php endif; ?>
 
-<?php if (can_act_task($user, $t)): ?>
+<?php if ($canAct): ?>
     <div class="stack">
+        <?php if ($mine && !$t['accepted_at']): ?>
+            <?= action_button('task_accept', (int) $t['id'], 'Preuzimam zadatak', 'btn ghost block', [], null, 'check') ?>
+        <?php endif; ?>
         <?php if ($t['status'] === 'zastoj'): ?>
-            <form method="post" action="<?= e(url() . 'api/zadatak.php') ?>">
-                <?= csrf_field() ?><input type="hidden" name="action" value="start"><input type="hidden" name="id" value="<?= (int) $t['id'] ?>">
-                <button class="btn ghost block" type="submit">Nastavi rad</button>
-            </form>
+            <?= action_button('task_start', (int) $t['id'], 'Nastavi rad (zastoj rešen)', 'btn ghost block', [], null, 'play') ?>
         <?php elseif ($t['status'] === 'ceka'): ?>
-            <form method="post" action="<?= e(url() . 'api/zadatak.php') ?>">
-                <?= csrf_field() ?><input type="hidden" name="action" value="start"><input type="hidden" name="id" value="<?= (int) $t['id'] ?>">
-                <button class="btn ghost block" type="submit">Počinjem</button>
-            </form>
+            <?= action_button('task_start', (int) $t['id'], 'Počinjem', 'btn ghost block', [], null, 'play') ?>
         <?php endif; ?>
         <div class="btn-row">
-            <a class="btn primary grow" href="<?= e(url('zadatak_zavrsi', ['id' => $t['id']])) ?>"><?= icon($t['requires_photo'] ? 'camera' : 'check', 20) ?><?= $t['requires_photo'] ? 'Završi + foto' : 'Završi' ?></a>
-            <?php if ($t['status'] !== 'zastoj'): ?><a class="btn warn" href="<?= e(url('zadatak_zastoj', ['id' => $t['id']])) ?>">Zastoj</a><?php endif; ?>
+            <?php if ($t['requires_photo']): ?>
+                <a class="btn primary grow" href="<?= e(url('zadatak_zavrsi', ['id' => $t['id']])) ?>"><?= icon('camera', 20) ?>Završi + foto</a>
+            <?php else: ?>
+                <a class="btn primary grow" href="<?= e(url('zadatak_zavrsi', ['id' => $t['id']])) ?>"><?= icon('check', 20) ?>Završi</a>
+            <?php endif; ?>
+            <?php if ($t['status'] !== 'zastoj'): ?><a class="btn warn" href="<?= e(url('zastoj', ['task' => $t['id']])) ?>">Prijavi problem</a><?php endif; ?>
         </div>
     </div>
 <?php endif; ?>
 
-<p class="mono muted small">Zadato <?= e((new DateTimeImmutable($t['created_at']))->format('j.n.Y. H:i')) ?><?= $t['completed_at'] ? ' · završeno ' . e((new DateTimeImmutable($t['completed_at']))->format('j.n.Y. H:i')) : '' ?></p>
+<?php if (!$open && $canEdit): ?>
+    <details class="card">
+        <summary class="row-between"><span>Nije dobro urađeno? Otvori ponovo</span><?= icon('chevron') ?></summary>
+        <form class="stack" method="post" action="<?= e(url() . 'api/akcija.php') ?>">
+            <?= csrf_field() ?><?= once_field() ?>
+            <input type="hidden" name="action" value="task_reopen"><input type="hidden" name="id" value="<?= (int) $t['id'] ?>"><input type="hidden" name="back" value="<?= e(here()) ?>">
+            <label class="field"><span>Razlog (obavezno)</span><textarea class="input" name="reason" rows="2" required placeholder="Npr. račun nije čitljiv"></textarea></label>
+            <button class="btn warn block" type="submit">Otvori ponovo</button>
+        </form>
+    </details>
+<?php endif; ?>
+
+<section class="stack">
+    <h2 class="sec-head"><span>KOMENTARI I ISTORIJA</span></h2>
+    <ol class="hist">
+        <li><span class="mono muted small"><?= e((new DateTimeImmutable($t['created_at']))->format('j.n. H:i')) ?></span> <strong><?= e($t['created_name'] ?? '—') ?></strong> zadao zadatak → <?= e($t['assigned_name']) ?></li>
+        <?php foreach ($comments as $c): ?>
+            <li class="<?= $c['kind'] === 'komentar' ? 'cmt' : ($c['kind'] === 'ponovo_otvoren' ? 'warn' : 'sys') ?>">
+                <span class="mono muted small"><?= e((new DateTimeImmutable($c['created_at']))->format('j.n. H:i')) ?></span>
+                <strong><?= e($c['user_name'] ?? '—') ?></strong>
+                <?= $c['kind'] === 'ponovo_otvoren' ? 'ponovo otvorio: ' : '' ?><?= nl2br(e($c['body'])) ?>
+                <?php if ($c['file_id']): ?><a class="cmt-img" href="<?= e(file_url((int) $c['file_id'])) ?>" target="_blank" rel="noopener"><img src="<?= e(file_url((int) $c['file_id'], true)) ?>" alt="" loading="lazy"></a><?php endif; ?>
+            </li>
+        <?php endforeach; ?>
+    </ol>
+    <form class="stack card" method="post" action="<?= e(url() . 'api/akcija.php') ?>" data-autosave="task-cmt-<?= (int) $t['id'] ?>">
+        <?= csrf_field() ?><?= once_field() ?>
+        <input type="hidden" name="action" value="task_comment"><input type="hidden" name="id" value="<?= (int) $t['id'] ?>"><input type="hidden" name="back" value="<?= e(here()) ?>">
+        <label class="field"><span>Komentar</span><textarea class="input" name="body" rows="2" placeholder="Pitanje, dopuna, stanje…"></textarea></label>
+        <?= uploader('file_id', 'Slika uz komentar', false, 'foto', false, 'opciono', []) ?>
+        <button class="btn ghost block" type="submit">Pošalji komentar</button>
+    </form>
+</section>
+
+<?php if ($canEdit): ?>
+    <?= action_button('task_delete', (int) $t['id'], 'Obriši zadatak', 'btn link warn block', [], 'Obrisati zadatak „' . $t['title'] . '"?', 'trash') ?>
+<?php endif; ?>

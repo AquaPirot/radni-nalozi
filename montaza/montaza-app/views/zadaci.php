@@ -1,5 +1,5 @@
 <?php /** @var array $user @var string $f @var array $filters @var array $counts @var array $tasks */ ?>
-<nav class="segments">
+<nav class="segments scroll">
     <?php foreach ($filters as $key => $label): ?>
         <a class="seg<?= $f === $key ? ' on' : '' ?>" href="<?= e(url('zadaci', ['f' => $key])) ?>"><?= e($label) ?> · <?= (int) $counts[$key] ?></a>
     <?php endforeach; ?>
@@ -8,7 +8,7 @@
 <?php if (!$tasks): ?>
     <div class="empty">
         <?= icon('check', 32) ?>
-        <p><?= $f === 'zavrseno' ? 'Nema završenih zadataka u poslednjih 60 dana.' : 'Nema otvorenih zadataka.' ?></p>
+        <p><?= $f === 'zavrseno' ? 'Nema završenih zadataka u poslednjih 60 dana.' : ($f === 'bez_roka' ? 'Nema zadataka bez roka.' : 'Nema otvorenih zadataka.') ?></p>
     </div>
 <?php endif; ?>
 
@@ -26,7 +26,7 @@
                 <?php if ($t['priority'] === 'hitno' && $t['status'] !== 'zavrseno'): ?><span class="tag warn">HITNO</span><?php endif; ?>
                 <?php if ($t['requires_photo'] && $t['status'] !== 'zavrseno'): ?><span class="tag"><?= icon('camera', 14) ?></span><?php endif; ?>
             </div>
-            <?php if ($t['due_date']): ?><span class="mono muted rok<?= $t['status'] !== 'zavrseno' && days_late($t['due_date']) ? ' warn' : '' ?>">ROK <?= e(fmt_dm($t['due_date'])) ?></span><?php endif; ?>
+            <?php if ($t['due_date']): ?><span class="mono muted rok<?= $t['status'] !== 'zavrseno' && days_late($t['due_date']) ? ' warn' : '' ?>">ROK <?= e(fmt_dm($t['due_date'])) ?><?= $t['due_time'] ? ' ' . e(substr($t['due_time'], 0, 5)) : '' ?></span><?php elseif ($t['status'] !== 'zavrseno'): ?><span class="mono muted rok">BEZ ROKA</span><?php endif; ?>
         </div>
         <div class="pcard-sub"><?= e(implode(' · ', array_filter([$who, $t['project_name']]))) ?></div>
         <div class="pcard-foot">
@@ -35,13 +35,7 @@
                 <?php if ($t['requires_photo']): ?>
                     <a class="btn primary sm" href="<?= e(url('zadatak_zavrsi', ['id' => $t['id']])) ?>"><?= icon('camera', 18) ?>Završi</a>
                 <?php else: ?>
-                    <form method="post" action="<?= e(url() . 'api/zadatak.php') ?>">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="done">
-                        <input type="hidden" name="id" value="<?= (int) $t['id'] ?>">
-                        <input type="hidden" name="back" value="<?= e($f) ?>">
-                        <button class="btn primary sm" type="submit"><?= icon('check', 18) ?>Završeno</button>
-                    </form>
+                    <?= action_button('task_done', (int) $t['id'], 'Završeno', 'btn primary sm', [], 'Označiti „' . $t['title'] . '" kao završeno?', 'check') ?>
                 <?php endif; ?>
             <?php endif; ?>
         </div>

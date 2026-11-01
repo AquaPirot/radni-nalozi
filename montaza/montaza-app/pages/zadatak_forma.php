@@ -17,6 +17,9 @@ if (!$isNew) {
 $errors = [];
 if (is_post()) {
     csrf_check();
+    if (!once_check()) {
+        redirect($isNew ? url('zadaci') : url('zadatak', ['id' => $task['id']]));
+    }
     $in = task_input($_POST);
     $errors = task_validate($in, $user);
     if (!$errors) {
@@ -32,14 +35,16 @@ if (is_post()) {
     }
     $v = $in;
     $v['due_date'] = $in['due_raw'];
+    $v['due_time'] = $in['due_time'];
 } elseif ($isNew) {
     $v = [
         'title' => '', 'description' => '', 'assigned_to' => $user['role'] === 'vlasnik' ? 0 : (int) $user['id'],
-        'project_id' => (int) ($_GET['project'] ?? 0) ?: null, 'due_date' => '', 'priority' => 'normal', 'requires_photo' => false,
+        'project_id' => (int) ($_GET['project'] ?? 0) ?: null, 'due_date' => '', 'due_time' => null, 'no_deadline' => false, 'priority' => 'normal', 'requires_photo' => false,
     ];
 } else {
     $v = $task;
     $v['requires_photo'] = (bool) $task['requires_photo'];
+    $v['no_deadline'] = !$task['due_date'];
 }
 
 $projects = q_all("SELECT id, code, customer_name, city FROM projects WHERE status = 'aktivan' OR id = ? ORDER BY customer_name", [(int) ($v['project_id'] ?? 0)]);
