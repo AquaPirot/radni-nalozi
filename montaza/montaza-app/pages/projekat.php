@@ -30,7 +30,15 @@ $log = $user['role'] === 'vlasnik' ? q_all(
     [$id]
 ) : [];
 
+$tasks = q_all(
+    "SELECT t.*, a.name AS assigned_name, d.name AS completed_name FROM tasks t JOIN users a ON a.id = t.assigned_to
+     LEFT JOIN users d ON d.id = t.completed_by WHERE t.project_id = ? ORDER BY t.status = 'zavrseno', t.due_date IS NULL, t.due_date",
+    [$id]
+);
+$tasks = array_values(array_filter($tasks, fn($t) => can_view_task($user, $t)));
+
 view('projekat', [
+    'tasks'       => $tasks,
     'title'       => $project['customer_name'],
     'tab'         => 'projekti',
     'hideTop'     => true,

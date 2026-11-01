@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS login_attempts (
     username   VARCHAR(50)  NULL,
     created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    KEY ix_login_attempts_ip_time (ip, created_at)
+    KEY ix_login_attempts_ip_time (ip, created_at),
+    KEY ix_login_attempts_user_time (username, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS projects (
@@ -96,10 +97,38 @@ CREATE TABLE IF NOT EXISTS project_items (
     CONSTRAINT fk_items_completed_by FOREIGN KEY (completed_by) REFERENCES users(id)    ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Zadaci van projekata (popis, alat, servis kombija, nabavka…)
+CREATE TABLE IF NOT EXISTS tasks (
+    id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    title          VARCHAR(200) NOT NULL,
+    description    TEXT         NULL,
+    assigned_to    INT UNSIGNED NOT NULL,
+    created_by     INT UNSIGNED NULL,
+    project_id     INT UNSIGNED NULL,
+    due_date       DATE         NULL,
+    priority       ENUM('normal','hitno') NOT NULL DEFAULT 'normal',
+    requires_photo TINYINT(1)   NOT NULL DEFAULT 0,
+    status         ENUM('ceka','u_toku','zavrseno','zastoj') NOT NULL DEFAULT 'ceka',
+    started_at     DATETIME     NULL,
+    completed_at   DATETIME     NULL,
+    completed_by   INT UNSIGNED NULL,
+    note           TEXT         NULL,
+    created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY ix_tasks_assigned_status (assigned_to, status),
+    KEY ix_tasks_created_by (created_by),
+    KEY ix_tasks_project (project_id),
+    CONSTRAINT fk_tasks_assigned  FOREIGN KEY (assigned_to)  REFERENCES users(id)    ON DELETE CASCADE,
+    CONSTRAINT fk_tasks_creator   FOREIGN KEY (created_by)   REFERENCES users(id)    ON DELETE SET NULL,
+    CONSTRAINT fk_tasks_project   FOREIGN KEY (project_id)   REFERENCES projects(id) ON DELETE SET NULL,
+    CONSTRAINT fk_tasks_completed FOREIGN KEY (completed_by) REFERENCES users(id)    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS stoppages (
     id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    project_id  INT UNSIGNED NOT NULL,
+    project_id  INT UNSIGNED NULL,
     item_id     INT UNSIGNED NULL,
+    task_id     INT UNSIGNED NULL,
     reason      ENUM('materijal','vreme','kupac','ekipa','ostalo') NOT NULL,
     note        VARCHAR(500) NULL,
     created_by  INT UNSIGNED NULL,
@@ -109,6 +138,8 @@ CREATE TABLE IF NOT EXISTS stoppages (
     PRIMARY KEY (id),
     KEY ix_stoppages_project (project_id),
     KEY ix_stoppages_created (created_at),
+    KEY ix_stoppages_task (task_id),
+    CONSTRAINT fk_stop_task        FOREIGN KEY (task_id)     REFERENCES tasks(id)         ON DELETE CASCADE,
     CONSTRAINT fk_stop_project     FOREIGN KEY (project_id)  REFERENCES projects(id)      ON DELETE CASCADE,
     CONSTRAINT fk_stop_item        FOREIGN KEY (item_id)     REFERENCES project_items(id) ON DELETE SET NULL,
     CONSTRAINT fk_stop_created_by  FOREIGN KEY (created_by)  REFERENCES users(id)         ON DELETE SET NULL,
@@ -117,8 +148,9 @@ CREATE TABLE IF NOT EXISTS stoppages (
 
 CREATE TABLE IF NOT EXISTS files (
     id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    project_id  INT UNSIGNED NOT NULL,
+    project_id  INT UNSIGNED NULL,
     item_id     INT UNSIGNED NULL,
+    task_id     INT UNSIGNED NULL,
     kind        ENUM('lokacija_pre','posle','foto','nalog_pdf') NOT NULL,
     path        VARCHAR(255) NOT NULL,
     thumb_path  VARCHAR(255) NULL,
@@ -131,6 +163,8 @@ CREATE TABLE IF NOT EXISTS files (
     PRIMARY KEY (id),
     KEY ix_files_project (project_id),
     KEY ix_files_item (item_id),
+    KEY ix_files_task (task_id),
+    CONSTRAINT fk_files_task    FOREIGN KEY (task_id)     REFERENCES tasks(id)         ON DELETE CASCADE,
     CONSTRAINT fk_files_project FOREIGN KEY (project_id)  REFERENCES projects(id)      ON DELETE CASCADE,
     CONSTRAINT fk_files_item    FOREIGN KEY (item_id)     REFERENCES project_items(id) ON DELETE SET NULL,
     CONSTRAINT fk_files_user    FOREIGN KEY (uploaded_by) REFERENCES users(id)         ON DELETE SET NULL

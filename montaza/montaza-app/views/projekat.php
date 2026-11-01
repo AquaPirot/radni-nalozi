@@ -1,5 +1,5 @@
 <?php
-/** @var array $user @var array $project @var array $items @var array $filesByItem @var ?array $lokacija @var ?array $stoppage @var ?array $parent @var array $children @var array $log */
+/** @var array $tasks @var array $user @var array $project @var array $items @var array $filesByItem @var ?array $lokacija @var ?array $stoppage @var ?array $parent @var array $children @var array $log */
 $p = $project;
 $isOwner = $user['role'] === 'vlasnik';
 [$tag, $tagCls] = type_tag($p);
@@ -193,6 +193,24 @@ $logLabels = [
         <?php endforeach; ?>
     </ol>
 </section>
+
+<?php if ($tasks || $p['status'] === 'aktivan'): ?>
+    <section class="stack">
+        <header class="row-between">
+            <h2 class="h2">Zadaci</h2>
+            <?php if ($p['status'] === 'aktivan'): ?><a class="chip" href="<?= e(url('novi_zadatak', ['project' => $p['id']])) ?>"><?= icon('plus', 16) ?>&nbsp;Zadatak</a><?php endif; ?>
+        </header>
+        <?php if ($tasks): ?>
+            <div class="list">
+                <?php foreach ($tasks as $t): [$tl, $tc] = task_status_line($t); ?>
+                    <a class="list-row" href="<?= e(url('zadatak', ['id' => $t['id']])) ?>">
+                        <span><span class="strong"><?= e($t['title']) ?></span><br><span class="small status <?= e($tc) ?>"><i></i><?= e($t['assigned_name']) ?> · <?= e($tl) ?></span></span><?= icon('chevron') ?>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </section>
+<?php endif; ?>
 
 <?php if ($p['notes'] && $isOwner): ?>
     <section class="card"><div class="label">NAPOMENA</div><p><?= nl2br(e($p['notes'])) ?></p></section>

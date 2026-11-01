@@ -176,6 +176,9 @@ function delete_project(array $project): void
 {
     $files = load_files((int) $project['id']);
     db()->beginTransaction();
+    // Zadaci vezani za projekat ostaju (bez veze), a njihove slike sa njima
+    q('UPDATE files SET project_id = NULL WHERE project_id = ? AND task_id IS NOT NULL', [$project['id']]);
+    q('UPDATE stoppages SET project_id = NULL WHERE project_id = ? AND task_id IS NOT NULL', [$project['id']]);
     q('UPDATE projects SET parent_project_id = NULL WHERE parent_project_id = ?', [$project['id']]);
     q('DELETE FROM projects WHERE id = ?', [$project['id']]);
     log_activity('project_deleted', (int) $project['id'], null, [

@@ -36,14 +36,15 @@ if ($count === 0 && is_post()) {
         if ($u['name'] === '') {
             $errors[] = "$label: unesi ime.";
         }
+        $u['username'] = $input[$r]['username'] = mb_strtolower($u['username']);
         if (!preg_match('/^[a-z0-9._-]{3,50}$/', $u['username'])) {
             $errors[] = "$label: korisničko ime 3–50 znakova (mala slova, brojevi, . _ -).";
         } elseif (isset($seen[$u['username']])) {
             $errors[] = "$label: korisničko ime je već upotrebljeno.";
         }
         $seen[$u['username']] = true;
-        if (mb_strlen($u['password']) < 8) {
-            $errors[] = "$label: lozinka mora imati bar 8 znakova.";
+        if (mb_strlen($u['password']) < PASSWORD_MIN) {
+            $errors[] = "$label: lozinka mora imati bar " . PASSWORD_MIN . " znaka.";
         }
     }
     if (!$errors) {
@@ -101,8 +102,8 @@ if ($count === 0 && is_post()) {
                         <input class="input" name="<?= $r ?>[name]" value="<?= e($input[$r]['name']) ?>" required></label>
                     <label class="field"><span>Korisničko ime</span>
                         <input class="input" name="<?= $r ?>[username]" value="<?= e($input[$r]['username']) ?>" autocapitalize="none" required></label>
-                    <label class="field"><span>Lozinka (min. 8)</span>
-                        <input class="input" type="password" name="<?= $r ?>[password]" minlength="8" required></label>
+                    <label class="field"><span>Lozinka (min. <?= PASSWORD_MIN ?>)</span>
+                        <input class="input" type="password" name="<?= $r ?>[password]" minlength="<?= PASSWORD_MIN ?>" inputmode="numeric" required></label>
                 </fieldset>
             <?php endforeach; ?>
             <button class="btn primary block" type="submit">Napravi naloge</button>

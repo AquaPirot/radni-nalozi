@@ -11,7 +11,7 @@ if (!$project || !can_view_project($user, (int) $project['id'])) {
 }
 $itemId = (int) ($_GET['item'] ?? 0);
 $sql = "SELECT f.*, i.kind AS item_kind FROM files f LEFT JOIN project_items i ON i.id = f.item_id
-        WHERE f.project_id = ? AND f.mime LIKE 'image/%'";
+        WHERE f.project_id = ? AND f.task_id IS NULL AND f.mime LIKE 'image/%'";
 $params = [$project['id']];
 if ($itemId) {
     $sql .= ' AND f.item_id = ?';

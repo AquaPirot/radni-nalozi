@@ -1,6 +1,6 @@
-<?php /** @var array $item @var string $reason @var string $note @var ?string $error */ ?>
+<?php /** @var ?array $item @var string $reason @var string $note @var ?string $error */ ?>
 <?php if ($error): ?><div class="alert warn" role="alert"><?= e($error) ?></div><?php endif; ?>
-<form class="stack" method="post" action="<?= e(url('zastoj', ['item' => $item['id']])) ?>">
+<form class="stack" method="post" action="<?= e($action ?? url('zastoj', ['item' => $item['id']])) ?>">
     <?= csrf_field() ?>
     <div class="field">
         <span>Razlog</span>

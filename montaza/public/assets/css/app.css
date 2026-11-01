@@ -516,3 +516,32 @@ a.seg { display: inline-flex; align-items: center; justify-content: center; }
 .thumb[hidden] { display: none !important; }
 .btn { white-space: nowrap; }
 .btn-row .btn { font-size: 16px; padding: 0 16px; }
+
+/* ══ FAZA 3b: zadaci ══════════════════════════════════════ */
+.nav-ic { position: relative; }
+.badge {
+    position: absolute; top: -6px; right: -12px; min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 10px; background: var(--accent); color: var(--accent-ink);
+    font: 700 12px/20px var(--mono); text-align: center;
+}
+.tcard { position: relative; }
+.tcard-link { position: absolute; inset: 0; z-index: 0; border-radius: inherit; }
+.tcard .pcard-foot form, .tcard .pcard-foot .btn { position: relative; z-index: 1; }
+.tcard.done { opacity: .7; }
+.tcard .tag .ic { display: inline; }
+.btn.sm { min-height: 44px; padding: 0 16px; font-size: 15px; gap: 6px; border-radius: 12px; }
+.task-title { font-size: 26px; font-weight: 800; letter-spacing: -.01em; line-height: 1.2; }
+.text-2 { color: var(--text-2); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-radio { position: relative; }
+.chip-radio input { position: absolute; opacity: 0; inset: 0; }
+.chip-radio span {
+    display: inline-flex; align-items: center; min-height: 48px; padding: 0 18px;
+    border-radius: 14px; border: 1px solid var(--border); background: var(--surface);
+    font-weight: 600; cursor: pointer;
+}
+.chip-radio input:checked + span { background: var(--text); color: var(--bg); border-color: var(--text); }
+.chip-radio input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.list-row .status { font-size: 14px; gap: 6px; }
+.list-row .status i { width: 8px; height: 8px; }
+.bottom-nav a { min-width: 72px; }

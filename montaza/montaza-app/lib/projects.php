@@ -216,7 +216,7 @@ function open_stoppages_for(array $projectIds): array
 
 function load_files(int $projectId): array
 {
-    return q_all('SELECT * FROM files WHERE project_id = ? ORDER BY created_at, id', [$projectId]);
+    return q_all('SELECT * FROM files WHERE project_id = ? AND task_id IS NULL ORDER BY created_at, id', [$projectId]);
 }
 
 // ── Prikaz ──────────────────────────────────────────────────

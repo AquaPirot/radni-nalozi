@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 const REMEMBER_COOKIE = 'mz_remember';
 const REMEMBER_DAYS   = 30;
-const LOGIN_MAX_TRIES = 5;
+const LOGIN_MAX_TRIES  = 5;   // po IP-u i po nalogu, u prozoru od 15 min
 const LOGIN_WINDOW_MIN = 15;
+const LOGIN_DAY_TRIES  = 20;  // po nalogu u 24h → zaključan dan (lozinke su kratke, 4 cifre)
+const PASSWORD_MIN     = 4;
 
 function is_https(): bool
 {
@@ -81,21 +83,28 @@ function has_role(string ...$roles): bool
 
 // ── Login / logout ──────────────────────────────────────────
 
-function login_is_blocked(string $ip): bool
+/** Vraća poruku ako je prijava blokirana (po IP-u ili po nalogu), inače null. */
+function login_block_reason(string $ip, string $username): ?string
 {
-    $n = (int) q_val(
-        'SELECT COUNT(*) FROM login_attempts WHERE ip = ? AND created_at > (NOW() - INTERVAL ' . LOGIN_WINDOW_MIN . ' MINUTE)',
-        [$ip]
-    );
-    return $n >= LOGIN_MAX_TRIES;
+    $w = 'created_at > (NOW() - INTERVAL ' . LOGIN_WINDOW_MIN . ' MINUTE)';
+    if ((int) q_val("SELECT COUNT(*) FROM login_attempts WHERE ip = ? AND $w", [$ip]) >= LOGIN_MAX_TRIES
+        || (int) q_val("SELECT COUNT(*) FROM login_attempts WHERE username = ? AND $w", [$username]) >= LOGIN_MAX_TRIES) {
+        return 'Previše pogrešnih pokušaja. Sačekaj ' . LOGIN_WINDOW_MIN . ' minuta.';
+    }
+    $day = (int) q_val('SELECT COUNT(*) FROM login_attempts WHERE username = ? AND created_at > (NOW() - INTERVAL 1 DAY)', [$username]);
+    if ($day >= LOGIN_DAY_TRIES) {
+        return 'Nalog je privremeno zaključan zbog previše pogrešnih pokušaja. Pokušaj sutra ili javi vlasniku.';
+    }
+    return null;
 }
 
 /** Vraća null ako je uspešno, inače poruku greške. */
 function attempt_login(string $username, string $password, bool $remember): ?string
 {
     $ip = client_ip();
-    if (login_is_blocked($ip)) {
-        return 'Previše pokušaja. Sačekaj ' . LOGIN_WINDOW_MIN . ' minuta.';
+    $username = mb_strtolower(mb_substr($username, 0, 50));
+    if ($block = login_block_reason($ip, $username)) {
+        return $block;
     }
 
     $user = q_one('SELECT id, password_hash, active FROM users WHERE username = ?', [$username]);
@@ -104,7 +113,10 @@ function attempt_login(string $username, string $password, bool $remember): ?str
     $ok = password_verify($password, $hash) && $user && (int) $user['active'] === 1;
 
     if (!$ok) {
-        q('INSERT INTO login_attempts (ip, username) VALUES (?, ?)', [$ip, mb_substr($username, 0, 50)]);
+        q('INSERT INTO login_attempts (ip, username) VALUES (?, ?)', [$ip, $username]);
+        if ($user && (int) q_val('SELECT COUNT(*) FROM login_attempts WHERE username = ? AND created_at > (NOW() - INTERVAL 1 DAY)', [$username]) === LOGIN_DAY_TRIES) {
+            notify(['vlasnik'], "Nalog \"$username\" je zaključan 24h zbog " . LOGIN_DAY_TRIES . " pogrešnih lozinki (IP $ip).");
+        }
         return 'Pogrešno korisničko ime ili lozinka.';
     }
 
@@ -112,7 +124,7 @@ function attempt_login(string $username, string $password, bool $remember): ?str
         q('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $user['id']]);
     }
 
-    q('DELETE FROM login_attempts WHERE ip = ?', [$ip]);
+    q('DELETE FROM login_attempts WHERE ip = ? OR created_at < (NOW() - INTERVAL 2 DAY)', [$ip]);
     session_regenerate_id(true);
     $_SESSION['uid'] = (int) $user['id'];
 

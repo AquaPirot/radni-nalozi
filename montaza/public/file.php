@@ -12,7 +12,14 @@ if (!$user) {
 }
 
 $file = q_one('SELECT * FROM files WHERE id = ?', [(int) ($_GET['id'] ?? 0)]);
-if (!$file || !can_view_project($user, (int) $file['project_id'])) {
+$allowed = false;
+if ($file && $file['task_id']) {
+    $task = load_task((int) $file['task_id']);
+    $allowed = $task && can_view_task($user, $task);
+} elseif ($file && $file['project_id']) {
+    $allowed = can_view_project($user, (int) $file['project_id']);
+}
+if (!$allowed) {
     http_response_code(404);
     exit;
 }
@@ -24,7 +31,7 @@ if (str_contains($rel, '..') || !is_file($path)) {
     exit;
 }
 
-$code = (string) q_val('SELECT code FROM projects WHERE id = ?', [$file['project_id']]);
+$code = $file['project_id'] ? (string) q_val('SELECT code FROM projects WHERE id = ?', [$file['project_id']]) : 'zadatak' . $file['task_id'];
 $name = ($file['kind'] === 'nalog_pdf' ? 'Nalog-' : 'Foto-') . $code . '-' . $file['id'] . ($file['mime'] === 'application/pdf' ? '.pdf' : '.jpg');
 
 header('Content-Type: ' . $file['mime']);

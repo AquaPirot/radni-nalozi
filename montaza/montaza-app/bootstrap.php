@@ -47,6 +47,7 @@ require APP_DIR . '/lib/rules.php';
 require APP_DIR . '/lib/project_actions.php';
 require APP_DIR . '/lib/notify.php';
 require APP_DIR . '/lib/item_actions.php';
+require APP_DIR . '/lib/tasks.php';
 
 function config(string $key, mixed $default = null): mixed
 {
